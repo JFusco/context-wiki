@@ -513,3 +513,5 @@ test("Sigma viewer loads all four wiki node types and applies search/type filter
   assert.equal(elements.details.textContent, "topic\nwiki/topic-1.md\nType: topic");
   assert.doesNotMatch(source, /innerHTML/);
 });
+
+require("./unit.test.cjs");
