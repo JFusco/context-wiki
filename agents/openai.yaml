@@ -1,0 +1,6 @@
+interface:
+  display_name: "Wiki"
+  short_description: "Initialize and maintain repository context wikis"
+  default_prompt: "Use $wiki to initialize or reconcile the context wiki in this repository."
+policy:
+  allow_implicit_invocation: true

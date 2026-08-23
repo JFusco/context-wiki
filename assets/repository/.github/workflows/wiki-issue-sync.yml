@@ -1,0 +1,56 @@
+name: Sync wiki issue state
+
+on:
+  schedule:
+    - cron: "17 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  GRAPHIFY_SKIP_HOOK: "1"
+
+concurrency:
+  group: wiki-issue-sync
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.PR_BOT_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Require bot token
+        run: |
+          test -n "$GH_TOKEN" || { echo 'PR_BOT_TOKEN is required'; exit 1; }
+          gh auth setup-git
+      - name: Refresh cited issues and open review PR
+        run: |
+          base="$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')"
+          git checkout -B "$base" "origin/$base"
+          node scripts/wiki/refresh-issue-state.cjs
+          node scripts/wiki/build-graph.cjs
+          node scripts/wiki/check.cjs
+          if [ -z "$(git status --porcelain -- wiki scripts/wiki/graph/data/graph.json)" ]; then echo 'No issue-state changes'; exit 0; fi
+          branch='bot/wiki-issue-sync'
+          git config user.name 'wiki-bot'
+          git config user.email 'wiki-bot@users.noreply.github.com'
+          git checkout -B "$branch"
+          git add wiki scripts/wiki/graph/data/graph.json
+          git commit -m 'docs(wiki): refresh cited issue state'
+          git push --force-with-lease origin "$branch"
+          existing="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number')"
+          if [ -n "$existing" ]; then
+            gh pr edit "$existing" --title 'docs(wiki): refresh cited issue state' --body 'Automated, reviewable refresh of cited GitHub issue state.'
+          else
+            gh pr create --base "$base" --head "$branch" --title 'docs(wiki): refresh cited issue state' --body 'Automated, reviewable refresh of cited GitHub issue state.'
+          fi

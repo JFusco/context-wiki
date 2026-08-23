@@ -1,0 +1,58 @@
+name: Sync context wiki
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  GRAPHIFY_SKIP_HOOK: "1"
+
+concurrency:
+  group: wiki-sync-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    if: github.event.pull_request.merged == true && !startsWith(github.event.pull_request.head.ref, 'bot/wiki-')
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.PR_BOT_TOKEN }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Require bot token
+        run: |
+          test -n "$GH_TOKEN" || { echo 'PR_BOT_TOKEN is required'; exit 1; }
+          gh auth setup-git
+      - name: Reconcile and open review PR
+        run: |
+          gh pr view "$PR_NUMBER" --json number,title,url,mergedAt,files --jq '{number,title,url,merged_at:.mergedAt,files:[.files[].path]}' > "$RUNNER_TEMP/wiki-merge.json"
+          node scripts/wiki/on-merge-sync.cjs --context "$RUNNER_TEMP/wiki-merge.json"
+          node scripts/wiki/build-graph.cjs
+          node scripts/wiki/check.cjs
+          if [ -z "$(git status --porcelain -- wiki scripts/wiki/graph/data/graph.json)" ]; then echo 'No wiki changes'; exit 0; fi
+          branch="bot/wiki-sync/pr-$PR_NUMBER"
+          git config user.name 'wiki-bot'
+          git config user.email 'wiki-bot@users.noreply.github.com'
+          git checkout -B "$branch"
+          git add wiki scripts/wiki/graph/data/graph.json
+          git commit -m "docs(wiki): reconcile merged PR #$PR_NUMBER"
+          git push --force-with-lease origin "$branch"
+          existing="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number')"
+          if [ -n "$existing" ]; then
+            gh pr edit "$existing" --title "docs(wiki): reconcile PR #$PR_NUMBER" --body "Automated, reviewable wiki reconciliation for merged PR #$PR_NUMBER."
+          else
+            gh pr create --base "$BASE_BRANCH" --head "$branch" --title "docs(wiki): reconcile PR #$PR_NUMBER" --body "Automated, reviewable wiki reconciliation for merged PR #$PR_NUMBER."
+          fi
