@@ -38,3 +38,16 @@ git diff --check
 ```
 
 Review `git status --short` and keep unrelated user changes intact.
+
+<!-- wiki-skill:start -->
+## Context wiki
+
+Use `wiki/` as this repository's durable record of executed plans, decisions, and substantive change history.
+
+- Start history and rationale questions at `wiki/INDEX.md`; load only the pages it routes to.
+- After executing a Claude, Codex, or Cursor plan, archive it and add the journal/topic updates in the same delivery per `wiki/MECHANICS.md`.
+- Run `node scripts/wiki/discover-plans.cjs` to recover missed plans, `node scripts/wiki/build-graph.cjs` after wiki edits, and `node scripts/wiki/check.cjs` before completion.
+- The Sigma.js graph indexes only Markdown under `wiki/`; never add code nodes.
+
+This managed block was installed for Codex, Cursor, and Claude (via `@AGENTS.md` in `CLAUDE.md`).
+<!-- wiki-skill:end -->

@@ -109,6 +109,11 @@ function managedClaudeText() {
   return [BLOCK_START, "@AGENTS.md", BLOCK_END].join("\n");
 }
 
+function upsertClaudeImport(file, dryRun, changes) {
+  if (fs.existsSync(file) && fs.readFileSync(file, "utf8").trim() === "@AGENTS.md") return;
+  upsertBlock(file, managedClaudeText(), BLOCK_START, BLOCK_END, dryRun, changes);
+}
+
 function upsertBlock(file, body, start, end, dryRun, changes) {
   const exists = fs.existsSync(file);
   const original = exists ? fs.readFileSync(file, "utf8") : "";
@@ -335,7 +340,7 @@ function main() {
   if (hasSymlinkComponent(project.root, agentsFile)) conflicts.push("AGENTS.md (symlink path)");
   else upsertBlock(agentsFile, managedAgentsText(), BLOCK_START, BLOCK_END, args.dryRun, changes);
   if (hasSymlinkComponent(project.root, claudeFile)) conflicts.push("CLAUDE.md (symlink path)");
-  else upsertBlock(claudeFile, managedClaudeText(), BLOCK_START, BLOCK_END, args.dryRun, changes);
+  else upsertClaudeImport(claudeFile, args.dryRun, changes);
   const hook = project.isGit ? installHook(project.root, args.dryRun, changes, warnings) : null;
   if (!project.isGit) warnings.push("not a Git repository; Git hooks and GitHub workflows were skipped");
   else if (args.github === "off") warnings.push("GitHub workflow installation was disabled by --no-github");
@@ -357,4 +362,4 @@ function main() {
 
 if (require.main === module) process.exit(main());
 
-module.exports = { parseArgs, resolveProject, installAssets, installHook, upsertBlock, sha, isInside, hasSymlinkComponent, atomicWrite };
+module.exports = { parseArgs, resolveProject, installAssets, installHook, upsertBlock, upsertClaudeImport, sha, isInside, hasSymlinkComponent, atomicWrite };

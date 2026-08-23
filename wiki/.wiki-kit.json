@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "files": {
+    ".github/workflows/wiki-check.yml": "25f60b9457a04b81b2b9c3835e9f7716449b31255468039fc74cfbb6ec15def7",
+    ".github/workflows/wiki-issue-sync.yml": "56213aa3f4b0c3c87ad1b4b916604483479689da7f3daa51a2274e3a33b9a16a",
+    ".github/workflows/wiki-sync.yml": "08d92063b3d0809aca2c408902957f77200bd9190187edfeb161ffc71900ed58",
+    "scripts/wiki/apply-plan-audit.cjs": "f4f34911d47e0c2b60d66d4a24c66445a968ca327ffeaa4364d0e8fad09b5024",
+    "scripts/wiki/archive-plan.cjs": "3ec120bc7a67c8daade244ceec770cd1af4b0e3c6630bf22be1a0b673a1468df",
+    "scripts/wiki/audit-plan-candidates.cjs": "6464b93227c02ff6b3ef819ff130a763d6c34a3cc6b4cae61f31899506bbe0c6",
+    "scripts/wiki/build-graph.cjs": "768c06f19b9e549777ed6bdd02e5640dba1cb2d63484789c245dcdc9f12f3b68",
+    "scripts/wiki/check.cjs": "a8b58ac819f3b1b5d2299550ae8bdf0d247d2e850b73dd93601d95f38677c8c9",
+    "scripts/wiki/discover-plans.cjs": "eef43cf849da3c13a4618b2a6fd23f5d243f396cba56d8c1e813c125c20c4ef3",
+    "scripts/wiki/graph/viewer/index.html": "b5a8ed4340b27ed015078333f964a47e4357ee862bb63225269498e4ec9a897b",
+    "scripts/wiki/graph/viewer/vendor/graphology-library.min.js": "5323729ec6d4ac5d98a245873646c27fd80c7234df13972faec5869f3c54a105",
+    "scripts/wiki/graph/viewer/vendor/graphology.umd.min.js": "641ea047e2f414dead999769d62567ce3c6f1ddc334f1e728bd5edb19d337977",
+    "scripts/wiki/graph/viewer/vendor/sigma.min.js": "a86b7eb3578e9028ee84d792bf20f1503f0335ce769d5ad454252dc0a5787618",
+    "scripts/wiki/graph/viewer/viewer.css": "8a5af6e9d7336248a80f1ba0ca8ac147bb5e12bbfcbcb0f153fd020c561e540a",
+    "scripts/wiki/graph/viewer/viewer.js": "e9148c8a98fd2a5a4d5ec0f8bba871f312ce8cd56e0db8f0864c64afba7116f8",
+    "scripts/wiki/lib/common.cjs": "e33e1b9763239bef1f0e845c2f85a39caaa1289f09e0efae8a8e2b83bedef9a8",
+    "scripts/wiki/lib/dates.cjs": "f12fe50458cb08ce74f9d06cb3112f1e37ac2a98eaaa9f7c8a94b90aaf0773db",
+    "scripts/wiki/lib/frontmatter.cjs": "c0e02c1072e18b3fbfaeb9b81851a993e7ae9a5c86d42e497340a4009498237b",
+    "scripts/wiki/lib/plans.cjs": "782bd71e016b01d06dc45989bafd5229ab8fc2a600118dbb221bdf4822f547b5",
+    "scripts/wiki/on-merge-sync.cjs": "a2410ad56b426962a4316386532ec0cf6d58612ae618a4783c838ed2b859772f",
+    "scripts/wiki/pre-commit.cjs": "697c24f26476b6d2acb01db7923ea687a0450f22ec65f4411937c9ccb9bd26f6",
+    "scripts/wiki/refresh-issue-state.cjs": "2803089a44235f97522d483e2eb553596717c300ba01034904147a8d7292ce63",
+    "scripts/wiki/serve-graph.cjs": "937b95fda74c0bb8b464e1fb3080aa65243c78b02d9dd69e26f0cfd6a3bf5493",
+    "wiki/INDEX.md": "fc210d37472028aa3aedebf9e6705c89a36f23449a19cbe3122c8d21823cd538",
+    "wiki/MECHANICS.md": "b18fa07ccdd7cb3fe29ec5a480821d1169e1706e766e9542f4ec299eb444825c",
+    "wiki/journal/.gitkeep": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    "wiki/plans/INDEX.md": "b68779d13f6b66f95f3dde6b60e05d4ab089b4943c86105b9f8a882ab353a690",
+    "wiki/topics/.gitkeep": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+  }
+}

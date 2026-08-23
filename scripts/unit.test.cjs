@@ -301,3 +301,21 @@ test("installer upserts managed blocks idempotently and honors dry-run", (t) => 
   assert.equal(fs.existsSync(dryFile), false);
   assert.equal(dryRun.length, 1);
 });
+
+test("installer preserves a standalone CLAUDE import and manages other content", (t) => {
+  const root = temp(t, "installer-claude-import");
+  const standalone = path.join(root, "CLAUDE.md");
+  const authored = path.join(root, "AUTHORED-CLAUDE.md");
+  write(standalone, "@AGENTS.md\n");
+  write(authored, "# Claude-only guidance\n");
+
+  const standaloneChanges = [];
+  installer.upsertClaudeImport(standalone, false, standaloneChanges);
+  assert.equal(fs.readFileSync(standalone, "utf8"), "@AGENTS.md\n");
+  assert.deepEqual(standaloneChanges, []);
+
+  const authoredChanges = [];
+  installer.upsertClaudeImport(authored, false, authoredChanges);
+  assert.match(fs.readFileSync(authored, "utf8"), /# Claude-only guidance\n\n<!-- wiki-skill:start -->\n@AGENTS\.md\n<!-- wiki-skill:end -->/);
+  assert.equal(authoredChanges.length, 1);
+});
