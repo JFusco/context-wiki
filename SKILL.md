@@ -82,7 +82,7 @@ Discovery scans Claude plans, Cursor plans, active and archived Codex JSONL sess
 - For history or rationale questions, start at `wiki/INDEX.md` and open only routed pages.
 - Rebuild with `node scripts/wiki/build-graph.cjs` after wiki edits.
 - Validate with `node scripts/wiki/check.cjs`.
-- View the Sigma.js graph with `node scripts/wiki/build-graph.cjs` then `node scripts/wiki/serve-graph.cjs` (http://127.0.0.1:4173/); stop the server when finished. A repository package may alias these as `pnpm graph:build` and `pnpm graph:view`. Set `GRAPH_PORT` to change the port.
+- View the Sigma.js graph with `node scripts/wiki/build-graph.cjs` then `node scripts/wiki/serve-graph.cjs`; stop the server when finished. It starts at http://127.0.0.1:4173/ and automatically selects the next available port when that one is occupied, allowing simultaneous repository viewers. Set `GRAPH_PORT` to require a specific port. The browser applies the Build Orchestration-style ForceAtlas2 layout and exposes search, type toggles, neighborhood focus, and node details. A repository package may alias these as `pnpm graph:build` and `pnpm graph:view`.
 
 The graph must contain only Markdown nodes whose IDs begin with `wiki/`. Never add source files, tests, validators, hooks, or workflow files as graph nodes.
 

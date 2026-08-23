@@ -13,48 +13,56 @@
       "id": "wiki/journal/2026-08-23-ai-pr-and-ai-commit-bootstrap.md",
       "label": "AI pull-request and commit automation bootstrap",
       "type": "journal",
-      "x": 0.62349,
-      "y": 0.781831,
+      "x": 0.707107,
+      "y": 0.707107,
+      "size": 8
+    },
+    {
+      "id": "wiki/journal/2026-08-23-graph-viewer-parity-and-port-fallback.md",
+      "label": "Graph viewer parity and port fallback",
+      "type": "journal",
+      "x": 0.382683,
+      "y": 0.92388,
       "size": 8
     },
     {
       "id": "wiki/journal/2026-08-23-plan-topic-integrity.md",
       "label": "Plan topic integrity",
       "type": "journal",
-      "x": 0.222521,
-      "y": 0.974928,
+      "x": 0,
+      "y": 1,
       "size": 8
     },
     {
       "id": "wiki/journal/2026-08-23-wiki-bootstrap-and-claude-import.md",
       "label": "Wiki bootstrap and standalone Claude import",
       "type": "journal",
-      "x": -0.222521,
-      "y": 0.974928,
+      "x": -0.382683,
+      "y": 0.92388,
       "size": 8
     },
     {
       "id": "wiki/MECHANICS.md",
       "label": "Wiki mechanics",
       "type": "index",
-      "x": 0.900969,
-      "y": 0.433884,
+      "x": 0.92388,
+      "y": 0.382683,
       "size": 12
     },
     {
       "id": "wiki/plans/2026-08-20-global-wiki-skill-and-repository-bootstrap-f45de79a63.md",
       "label": "Global `/wiki` Skill and Repository Bootstrap",
       "type": "plan",
-      "x": -0.62349,
-      "y": 0.781831,
+      "x": -0.707107,
+      "y": 0.707107,
       "size": 8
     },
     {
       "id": "wiki/plans/2026-08-23-add-focused-cjs-unit-tests-6569724de4.md",
       "label": "Add focused `.cjs` unit tests",
       "type": "plan",
-      "x": -0.900969,
-      "y": 0.433884,
+      "x": -0.92388,
+      "y": 0.382683,
       "size": 8
     },
     {
@@ -69,52 +77,66 @@
       "id": "wiki/plans/2026-08-23-self-host-the-wiki-with-standalone-claude-import-compatibility-37a2441a28.md",
       "label": "Self-Host the Wiki with Standalone CLAUDE Import Compatibility",
       "type": "plan",
-      "x": -0.900969,
-      "y": -0.433884,
+      "x": -0.92388,
+      "y": -0.382683,
       "size": 8
     },
     {
       "id": "wiki/plans/INDEX.md",
       "label": "Plan ledger",
       "type": "index",
-      "x": -0.62349,
-      "y": -0.781831,
+      "x": -0.707107,
+      "y": -0.707107,
       "size": 12
+    },
+    {
+      "id": "wiki/topics/graph-viewer.md",
+      "label": "Graph viewer",
+      "type": "topic",
+      "x": -0.382683,
+      "y": -0.92388,
+      "size": 8
     },
     {
       "id": "wiki/topics/installer-contract.md",
       "label": "Installer contract",
       "type": "topic",
-      "x": -0.222521,
-      "y": -0.974928,
+      "x": 0,
+      "y": -1,
       "size": 8
     },
     {
       "id": "wiki/topics/repository-automation.md",
       "label": "Repository automation",
       "type": "topic",
-      "x": 0.222521,
-      "y": -0.974928,
+      "x": 0.382683,
+      "y": -0.92388,
       "size": 8
     },
     {
       "id": "wiki/topics/script-testing.md",
       "label": "Script testing",
       "type": "topic",
-      "x": 0.62349,
-      "y": -0.781831,
+      "x": 0.707107,
+      "y": -0.707107,
       "size": 8
     },
     {
       "id": "wiki/topics/wiki-system.md",
       "label": "Wiki system",
       "type": "topic",
-      "x": 0.900969,
-      "y": -0.433884,
+      "x": 0.92388,
+      "y": -0.382683,
       "size": 8
     }
   ],
   "edges": [
+    {
+      "id": "001373ecc2017886",
+      "source": "wiki/journal/2026-08-23-graph-viewer-parity-and-port-fallback.md",
+      "target": "wiki/topics/graph-viewer.md",
+      "relation": "topic"
+    },
     {
       "id": "094d73c4b0b26557",
       "source": "wiki/journal/2026-08-23-plan-topic-integrity.md",
@@ -144,6 +166,18 @@
       "source": "wiki/INDEX.md",
       "target": "wiki/MECHANICS.md",
       "relation": "link"
+    },
+    {
+      "id": "39f8563e208acd43",
+      "source": "wiki/journal/2026-08-23-graph-viewer-parity-and-port-fallback.md",
+      "target": "wiki/topics/installer-contract.md",
+      "relation": "topic"
+    },
+    {
+      "id": "4807237ed84a35db",
+      "source": "wiki/journal/2026-08-23-graph-viewer-parity-and-port-fallback.md",
+      "target": "wiki/topics/wiki-system.md",
+      "relation": "topic"
     },
     {
       "id": "6054eb89bc06ebe2",
@@ -228,6 +262,18 @@
       "source": "wiki/plans/2026-08-23-self-host-the-wiki-with-standalone-claude-import-compatibility-37a2441a28.md",
       "target": "wiki/topics/installer-contract.md",
       "relation": "topic"
+    },
+    {
+      "id": "c40219290aba0aab",
+      "source": "wiki/topics/wiki-system.md",
+      "target": "wiki/topics/graph-viewer.md",
+      "relation": "link"
+    },
+    {
+      "id": "c72f229aa9b26889",
+      "source": "wiki/topics/graph-viewer.md",
+      "target": "wiki/topics/wiki-system.md",
+      "relation": "link"
     },
     {
       "id": "cfb02eb5135a53d3",

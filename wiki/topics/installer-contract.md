@@ -26,8 +26,13 @@ Other safe repository-local hook paths retain their existing direct-update behav
 
 The context-wiki repository uses its worktree-local installer when validating installer changes against itself. A separate canonical skill checkout is never modified as a side effect of repository initialization.
 
+## Global discovery links
+
+The persistent checkout may live outside `~/.agents/skills/wiki` and be exposed through a symbolic link. Global validation compares resolved targets, so the Codex/agent and Claude discovery entries may both point at `/Users/joe.fusco/Projects/context-wiki` without copying the skill or retaining the checkout's former folder name.
+
 ## Evidence
 
 - [Issue #3](https://github.com/JFusco/context-wiki/issues/3) tracks the compatibility and self-hosting delivery.
 - The installer integration suite proves a standalone import remains byte-identical across installation and a clean dry run.
 - The unit suite proves files with other authored content still receive the managed import block.
+- Global validation proves the agent and Claude discovery symlinks resolve to the same persistent checkout.

@@ -35,7 +35,7 @@ pnpm graph:build
 pnpm graph:view
 ```
 
-The local viewer is served at <http://127.0.0.1:4173/>. Target repositories do not receive this `package.json`; their installed viewer remains self-contained.
+The local viewer starts at <http://127.0.0.1:4173/> and advances to the next available port when needed. Target repositories do not receive this `package.json`; their installed viewer remains self-contained.
 
 ## Repository automation
 
@@ -56,16 +56,16 @@ Clone the repository into a persistent project checkout. Keep this checkout in p
 
 ```sh
 mkdir -p ~/Projects
-git clone https://github.com/JFusco/context-wiki.git ~/Projects/wiki
+git clone https://github.com/JFusco/context-wiki.git ~/Projects/context-wiki
 ```
 
 Symlink the checkout into each agent's global skills directory:
 
 ```sh
 mkdir -p ~/.agents/skills ~/.codex/skills ~/.claude/skills
-ln -s ~/Projects/wiki ~/.agents/skills/wiki
-ln -s ~/Projects/wiki ~/.codex/skills/wiki
-ln -s ~/Projects/wiki ~/.claude/skills/wiki
+ln -s ~/Projects/context-wiki ~/.agents/skills/wiki
+ln -s ~/Projects/context-wiki ~/.codex/skills/wiki
+ln -s ~/Projects/context-wiki ~/.claude/skills/wiki
 ```
 
 Each destination must be absent before linking. If an older copied installation exists, move it aside only after verifying the exact path; do not overwrite a real directory in place. When two agent skills directories already resolve to the same directory, create the link there once rather than duplicating it.
@@ -151,7 +151,7 @@ node scripts/wiki/serve-graph.cjs
 
 Implemented and partial archives without a topic are rejected by both the archive/audit path and `wiki check`. Historical rows that were not executed may remain topicless.
 
-The viewer is served at <http://127.0.0.1:4173/> by default. Set `GRAPH_PORT` to use another port.
+The viewer starts at <http://127.0.0.1:4173/> by default. If that port is occupied, it automatically selects the next available port and prints the actual URL, so graphs from multiple repositories can run together. Set `GRAPH_PORT` to require a specific port instead. Its Sigma.js presentation uses the same dark control shell, ForceAtlas2 network layout, search, type toggles, neighborhood focus, and detail panel pattern as the Build Orchestration graph. The deterministic circular coordinates in `graph.json` are only a safe seed; the browser settles them into the readable network layout.
 
 ## GitHub automation
 
