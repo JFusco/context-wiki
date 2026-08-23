@@ -29,6 +29,25 @@ function makeGit(name, remote = "") {
 }
 function write(file, body) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, body); }
 
+test("package manifest exposes the Sigma graph workflow", () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(SKILL, "package.json"), "utf8"));
+  assert.equal(manifest.private, true);
+  assert.equal(manifest.type, "commonjs");
+  assert.equal(manifest.dependencies.sigma, "3.0.3");
+  assert.equal(manifest.dependencies.graphology, "0.26.0");
+  assert.equal(manifest.devDependencies["@verndale/ai-commit"], "2.7.0");
+  assert.equal(manifest.devDependencies["@verndale/ai-pr"], "1.3.5");
+  assert.equal(manifest.engines.node, ">=24.14.0");
+  assert.equal(manifest.scripts["graph:build"], "node scripts/wiki/build-graph.cjs");
+  assert.equal(manifest.scripts["graph:view"], "node scripts/wiki/serve-graph.cjs");
+  assert.equal(manifest.scripts.commit, "ai-commit run");
+  assert.equal(manifest.scripts["pr:create"], "ai-pr");
+  assert.equal(manifest.scripts.prepare, "husky");
+  for (const relative of [".env.example", ".github/workflows/pr.yml", ".husky/commit-msg", ".husky/prepare-commit-msg"]) {
+    assert.ok(fs.existsSync(path.join(SKILL, relative)), relative);
+  }
+});
+
 test("non-Git initialization is complete, valid, and idempotent", () => {
   const root = temp("nongit");
   const first = init(root);
@@ -41,9 +60,13 @@ test("non-Git initialization is complete, valid, and idempotent", () => {
   }
   assert.ok(!fs.existsSync(path.join(root, ".github")));
   const before = fs.readFileSync(path.join(root, "wiki/.wiki-kit.json"), "utf8");
+  const ledger = path.join(root, "wiki/plans/INDEX.md");
+  fs.appendFileSync(ledger, "\nAuthored ledger content.\n");
   const second = init(root);
   assert.equal(second.status, 0, second.stderr);
   assert.equal(fs.readFileSync(path.join(root, "wiki/.wiki-kit.json"), "utf8"), before);
+  assert.match(fs.readFileSync(ledger, "utf8"), /Authored ledger content/);
+  assert.ok(!JSON.parse(before).files["wiki/plans/INDEX.md"], "the authored plan ledger must not be checksum-managed");
   assert.equal(node(path.join(root, "scripts/wiki/check.cjs"), ["--repo", root], { cwd: root }).status, 0);
 });
 
@@ -120,6 +143,15 @@ test("Husky and safe custom hook paths are extended; external paths are untouche
   const advisory = run(huskyHook, [], { cwd: huskyRoot, env: { WIKI_HOME: temp("hook-advisory-home") } });
   assert.equal(advisory.status, 0, "wiki lifecycle failures must remain advisory");
   assert.match(advisory.stderr, /warning: wiki lifecycle failed; continuing/);
+  const husky9Root = makeGit("husky-9");
+  write(path.join(husky9Root, ".husky/_/h"), "#!/usr/bin/env sh\nexit 0\n");
+  write(path.join(husky9Root, ".husky/_/pre-commit"), "#!/usr/bin/env sh\n. \"$(dirname \"$0\")/h\"\n");
+  git(husky9Root, ["config", "--local", "core.hooksPath", ".husky/_"]);
+  const husky9 = init(husky9Root);
+  assert.equal(husky9.status, 0, husky9.stderr);
+  assert.equal(fs.readFileSync(path.join(husky9Root, ".husky/_/pre-commit"), "utf8"), "#!/usr/bin/env sh\n. \"$(dirname \"$0\")/h\"\n");
+  assert.match(fs.readFileSync(path.join(husky9Root, ".husky/pre-commit"), "utf8"), /wiki-skill:start/);
+  assert.match(husky9.stdout, /hook: \.husky\/pre-commit/);
   const customRoot = makeGit("custom");
   git(customRoot, ["config", "--local", "core.hooksPath", ".config/hooks"]);
   assert.equal(init(customRoot).status, 0);
@@ -208,6 +240,7 @@ test("proposedPlans keeps the last Codex plan revision per title", () => {
 
 test("audit requires evidence, archives executed bodies, keeps non-executed rows, and avoids title collisions", () => {
   const root = temp("audit"); assert.equal(init(root).status, 0);
+  write(path.join(root, "wiki/topics/testing.md"), "# Testing\n");
   const bodyA = "# Same | [title]\n\nFirst body.\n"; const bodyB = "# Same | [title]\n\nSecond body.\n"; const bodyC = "# Skipped title\n\nThird body.\n";
   const hash = (body) => require("node:crypto").createHash("sha256").update(body).digest("hex");
   const manifest = { candidates: [
@@ -218,9 +251,12 @@ test("audit requires evidence, archives executed bodies, keeps non-executed rows
   const manifestFile = path.join(root, ".manifest.json"); write(manifestFile, JSON.stringify(manifest));
   const badAudit = path.join(root, ".bad.json"); write(badAudit, JSON.stringify({ entries: [{ id: "a", status: "implemented", evidence: [] }] }));
   assert.equal(node(path.join(root, "scripts/wiki/apply-plan-audit.cjs"), ["--manifest", manifestFile, "--audit", badAudit, "--repo", root], { cwd: root }).status, 2);
+  const topiclessAudit = path.join(root, ".topicless.json"); write(topiclessAudit, JSON.stringify({ entries: [{ id: "a", status: "implemented", evidence: ["ok"], topics: [] }] }));
+  const topicless = node(path.join(root, "scripts/wiki/apply-plan-audit.cjs"), ["--manifest", manifestFile, "--audit", topiclessAudit, "--repo", root], { cwd: root });
+  assert.equal(topicless.status, 2); assert.match(topicless.stderr, /implemented requires at least one topic/);
   const goodAudit = path.join(root, ".good.json"); write(goodAudit, JSON.stringify({ entries: [
-    { id: hash(bodyA), status: "implemented", evidence: ["test:fixture | passed"], topics: [] },
-    { id: "b", status: "implemented", evidence: ["test:fixture-2"], topics: [] },
+    { id: hash(bodyA), status: "implemented", evidence: ["test:fixture | passed"], topics: ["testing"] },
+    { id: "b", status: "implemented", evidence: ["test:fixture-2"], topics: ["testing"] },
     { id: "c", status: "not-implemented", evidence: [], topics: [] },
   ] }));
   assert.equal(node(path.join(root, "scripts/wiki/apply-plan-audit.cjs"), ["--manifest", manifestFile, "--audit", goodAudit, "--repo", root], { cwd: root }).status, 0);
@@ -243,6 +279,7 @@ test("audit requires evidence, archives executed bodies, keeps non-executed rows
 
 test("audit preflight is transactional and rejects forged digests and path-traversal dates", () => {
   const root = temp("audit-hostile"); assert.equal(init(root).status, 0);
+  write(path.join(root, "wiki/topics/runtime.md"), "# Runtime\n");
   const hash = (body) => require("node:crypto").createHash("sha256").update(body).digest("hex");
   const first = "# First\n\nBody.\n"; const second = "# Second\n\nBody.\n";
   const manifest = { candidates: [
@@ -251,8 +288,8 @@ test("audit preflight is transactional and rejects forged digests and path-trave
   ] };
   const manifestFile = path.join(root, "manifest.json"); write(manifestFile, JSON.stringify(manifest));
   const auditFile = path.join(root, "audit.json"); write(auditFile, JSON.stringify({ entries: [
-    { id: "first", status: "implemented", evidence: ["ok"], topics: [] },
-    { id: "second", status: "implemented", evidence: ["ok"], topics: [], date: "../../escape" },
+    { id: "first", status: "implemented", evidence: ["ok"], topics: ["runtime"] },
+    { id: "second", status: "implemented", evidence: ["ok"], topics: ["runtime"], date: "../../escape" },
   ] }));
   const before = fs.readFileSync(path.join(root, "wiki/plans/INDEX.md"), "utf8");
   const result = node(path.join(root, "scripts/wiki/apply-plan-audit.cjs"), ["--manifest", manifestFile, "--audit", auditFile, "--repo", root], { cwd: root });
@@ -260,7 +297,7 @@ test("audit preflight is transactional and rejects forged digests and path-trave
   assert.equal(fs.readFileSync(path.join(root, "wiki/plans/INDEX.md"), "utf8"), before);
   assert.deepEqual(fs.readdirSync(path.join(root, "wiki/plans")), ["INDEX.md"]);
   manifest.candidates[0].digest = "0".repeat(64); write(manifestFile, JSON.stringify(manifest));
-  write(auditFile, JSON.stringify({ entries: [{ id: "first", status: "implemented", evidence: ["ok"], topics: [] }] }));
+  write(auditFile, JSON.stringify({ entries: [{ id: "first", status: "implemented", evidence: ["ok"], topics: ["runtime"] }] }));
   assert.equal(node(path.join(root, "scripts/wiki/apply-plan-audit.cjs"), ["--manifest", manifestFile, "--audit", auditFile, "--repo", root], { cwd: root }).status, 2);
 });
 
@@ -289,9 +326,10 @@ test("graph is wiki-only, byte-stable, typed, and rejects dangling relationships
   for (const type of ["index", "topic", "journal", "plan"]) assert.match(viewer, new RegExp(`value="${type}"`));
 });
 
-test("archived plan repo-file links do not break graph build", () => {
+test("archived plan repo-file links remain safe and topicless archives fail validation", () => {
   const root = temp("plan-repo-links");
   assert.equal(init(root).status, 0);
+  write(path.join(root, "wiki/topics/documentation.md"), "# Documentation\n");
   const crypto = require("node:crypto");
   const body = "# Add CONTRIBUTING\n\nCreate `[CONTRIBUTING.md](CONTRIBUTING.md)` and see [mechanics](../MECHANICS.md).\n";
   const planDigest = crypto.createHash("sha256").update(body).digest("hex");
@@ -302,7 +340,7 @@ test("archived plan repo-file links do not break graph build", () => {
     'evidence: ["CONTRIBUTING.md shipped"]',
     'source_tool: "repository"',
     'source: "repository:test.plan.md"',
-    "topics: []",
+    "topics: [documentation]",
     `digest: "${planDigest}"`,
     "---",
     "",
@@ -311,7 +349,7 @@ test("archived plan repo-file links do not break graph build", () => {
   ].join("\n"));
   const marker = "<!-- wiki-plan-rows -->";
   const index = fs.readFileSync(path.join(root, "wiki/plans/INDEX.md"), "utf8");
-  const row = `| 2026-01-01 | [Add CONTRIBUTING](./2026-01-01-contributing.md) | implemented | CONTRIBUTING.md shipped | — <!-- plan:${planDigest} --> |`;
+  const row = `| 2026-01-01 | [Add CONTRIBUTING](./2026-01-01-contributing.md) | implemented | CONTRIBUTING.md shipped | documentation <!-- plan:${planDigest} --> |`;
   fs.writeFileSync(path.join(root, "wiki/plans/INDEX.md"), index.replace(marker, `${row}\n${marker}`));
   const build = path.join(root, "scripts/wiki/build-graph.cjs");
   assert.equal(node(build, ["--repo", root], { cwd: root }).status, 0);
@@ -319,6 +357,11 @@ test("archived plan repo-file links do not break graph build", () => {
   assert.ok(graph.edges.some((edge) => edge.source.startsWith("wiki/plans/") && edge.target === "wiki/MECHANICS.md"));
   assert.ok(!graph.nodes.some((node) => node.id === "wiki/plans/CONTRIBUTING.md"));
   assert.equal(node(path.join(root, "scripts/wiki/check.cjs"), ["--repo", root], { cwd: root }).status, 0);
+  const archive = path.join(root, "wiki/plans/2026-01-01-contributing.md");
+  fs.writeFileSync(archive, fs.readFileSync(archive, "utf8").replace("topics: [documentation]", "topics: []"));
+  assert.equal(node(build, ["--repo", root], { cwd: root }).status, 0);
+  const topicless = node(path.join(root, "scripts/wiki/check.cjs"), ["--repo", root], { cwd: root });
+  assert.equal(topicless.status, 2); assert.match(topicless.stderr, /at least one topic is required/);
 });
 
 test("audit-plan-candidates drafts matched rows using git without shell format strings", () => {

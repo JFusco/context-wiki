@@ -16,6 +16,12 @@ Missing `CLAUDE.md` files and files containing additional authored guidance reta
 - Managed `AGENTS.md` and pre-commit blocks remain idempotent.
 - The repository-local wiki graph contains Markdown nodes under `wiki/` only.
 
+## Husky 9 dispatch
+
+When `core.hooksPath` is `.husky/_` and the Husky runner is present, Git executes a generated stub that sources `_/h`; that runner exits after dispatching the matching user hook. The installer therefore leaves `.husky/_/pre-commit` untouched and manages its advisory block in `.husky/pre-commit`, where Husky can execute it.
+
+Other safe repository-local hook paths retain their existing direct-update behavior. External paths and symbolic-link targets remain protected.
+
 ## Self-hosting decision
 
 The context-wiki repository uses its worktree-local installer when validating installer changes against itself. A separate canonical skill checkout is never modified as a side effect of repository initialization.

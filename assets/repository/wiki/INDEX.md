@@ -10,4 +10,4 @@ This wiki is the durable project record for decisions, executed plans, and subst
 - `wiki/journal/` — chronological substantive-change entries.
 - `wiki/connections.md` — generated relationship summary.
 
-The interactive Sigma.js viewer is served at http://127.0.0.1:4173/ after `pnpm graph:build` then `pnpm graph:view` (same pattern as ai-orchestration; set `GRAPH_PORT` to change the port).
+The interactive Sigma.js viewer is served at http://127.0.0.1:4173/ after `node scripts/wiki/build-graph.cjs` then `node scripts/wiki/serve-graph.cjs` (set `GRAPH_PORT` to change the port).

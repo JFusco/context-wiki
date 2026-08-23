@@ -27,12 +27,14 @@ function main() {
     const status = scalar(parsed.raw, "status");
     const executed = scalar(parsed.raw, "executed");
     const evidence = list(parsed.raw, "evidence");
+    const topics = list(parsed.raw, "topics");
     const recordedDigest = scalar(parsed.raw, "digest").toLowerCase();
     const computedDigest = digest(parsed.body.trim() + "\n");
     for (const key of ["status", "executed", "source_tool", "source", "topics", "digest"]) if (!new RegExp(`^${key}:`, "m").test(parsed.raw)) errors.push(`${slash(path.relative(root, file))}: missing ${key}`);
     if (!["implemented", "partial"].includes(status)) errors.push(`${slash(path.relative(root, file))}: archived bodies must be implemented or partial`);
     if (executed !== "true") errors.push(`${slash(path.relative(root, file))}: executed must be true`);
     if (!evidence.length) errors.push(`${slash(path.relative(root, file))}: implementation evidence is required`);
+    if (!topics.length) errors.push(`${slash(path.relative(root, file))}: at least one topic is required`);
     if (!/^[a-f0-9]{64}$/.test(recordedDigest) || recordedDigest !== computedDigest) errors.push(`${slash(path.relative(root, file))}: digest does not match the archived body`);
     else {
       if (archiveDigests.has(recordedDigest)) errors.push(`${slash(path.relative(root, file))}: duplicate archived digest`);

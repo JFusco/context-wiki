@@ -1,0 +1,26 @@
+---
+slug: wiki-system
+---
+# Wiki system
+
+## Architecture
+
+The canonical global skill packages a deterministic repository installer, plan discovery and audit tools, authored wiki conventions, Git/GitHub integration, and a wiki-only Sigma.js graph. Installed scripts and templates are checksum-protected; repository-owned topics, journals, and plan archives remain authored content.
+
+The [global bootstrap plan](../plans/2026-08-20-global-wiki-skill-and-repository-bootstrap-f45de79a63.md) established this split. The later [self-hosting delivery](../plans/2026-08-23-self-host-the-wiki-with-standalone-claude-import-compatibility-37a2441a28.md) made this repository consume and validate its own installer.
+
+The canonical checkout is also a private pnpm package. It pins Sigma and Graphology and exposes `graph:build` and `graph:view` aliases for local development. Consuming repositories remain package-manager-neutral and receive the vendored browser viewer through the installer.
+
+## Plan relationship contract
+
+Every implemented or partial plan archive must include implementation evidence and at least one existing topic. Non-executed audit rows may remain topicless because no archived body enters the graph.
+
+Discovery and draft auditing do not invent topic names. The reviewing agent chooses durable topics, creates missing pages before applying an audit, and records substantive reconciliation in a journal entry. Direct archiving and `wiki check` enforce the same requirement so topicless executed-plan nodes cannot silently return.
+
+## Boundaries
+
+- Graph nodes remain Markdown files under `wiki/`.
+- Topic existence checks preserve the existing symlink and path-containment defenses.
+- The installer seeds `wiki/plans/INDEX.md` when missing, then leaves its authored rows outside checksum management.
+- The [installer contract](./installer-contract.md) governs managed assets and standalone Claude imports.
+- [Issue #5](https://github.com/JFusco/context-wiki/issues/5) tracks the topic-integrity repair.

@@ -4,7 +4,7 @@ executed: true
 evidence: ["Issue #1 https://github.com/JFusco/context-wiki/issues/1 labels area:testing, area:scripts", "PR #2 branch codex/1-cjs-unit-tests merge bee181dd9bbf"]
 source_tool: "codex"
 source: "codex:/Users/joe.fusco/.codex/sessions/2026/08/23/rollout-2026-08-23T07-45-40-01a02e70-ce78-70e3-b24f-43fb317cec2c.jsonl"
-topics: []
+topics: ["script-testing"]
 digest: "aa427de2dfbf73da13142d66ee33be1650e4e1b8e6cb29a13e273899eb7bffc5"
 ---
 

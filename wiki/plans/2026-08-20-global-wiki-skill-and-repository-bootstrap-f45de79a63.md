@@ -4,7 +4,7 @@ executed: true
 evidence: ["commit 333511a80d58 Initial publish of global wiki skill", "commit 44124d94a325 Add project README", "commit 228f3ea4cbf Add repository agent guidance", "No merged PR branch on HEAD"]
 source_tool: "codex"
 source: "codex:/Users/joe.fusco/.codex/sessions/2026/08/20/rollout-2026-08-20T15-50-46-01a020b9-db39-7d00-917f-33fbcfc92855.jsonl"
-topics: []
+topics: ["wiki-system"]
 digest: "f45de79a63b528e6871c35538ae9b0cff8a527e9c4236c540005519c98791f7c"
 ---
 

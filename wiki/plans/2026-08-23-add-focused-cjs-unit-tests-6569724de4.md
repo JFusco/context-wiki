@@ -4,7 +4,7 @@ executed: true
 evidence: ["PR #2 branch codex/1-cjs-unit-tests merge bee181dd9bbf"]
 source_tool: "codex"
 source: "codex:/Users/joe.fusco/.codex/sessions/2026/08/23/rollout-2026-08-23T07-45-40-01a02e70-ce78-70e3-b24f-43fb317cec2c.jsonl"
-topics: []
+topics: ["script-testing"]
 digest: "6569724de4e165427f8664e2bd9b1e8c0e2a3c93e015f478f7c6a7548c536a68"
 ---
 

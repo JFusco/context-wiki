@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+# wiki-skill:start
+wiki_skill_previous_status=$?
+if ! node scripts/wiki/pre-commit.cjs; then
+  echo "warning: wiki lifecycle failed; continuing" >&2
+fi
+if [ "$wiki_skill_previous_status" -ne 0 ]; then
+  exit "$wiki_skill_previous_status"
+fi
+unset wiki_skill_previous_status
+# wiki-skill:end

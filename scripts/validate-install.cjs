@@ -9,7 +9,8 @@ function main() {
   const root = path.resolve(__dirname, "..");
   const errors = [];
   const required = [
-    "SKILL.md", "agents/openai.yaml", "scripts/init-repository.cjs", "scripts/update-repository.cjs", "scripts/test.cjs", "assets/repository/wiki/INDEX.md",
+    "SKILL.md", "package.json", "pnpm-lock.yaml", ".env.example", ".github/workflows/pr.yml", ".husky/commit-msg", ".husky/prepare-commit-msg",
+    "agents/openai.yaml", "scripts/init-repository.cjs", "scripts/update-repository.cjs", "scripts/test.cjs", "assets/repository/wiki/INDEX.md",
     "assets/repository/scripts/wiki/discover-plans.cjs", "assets/repository/scripts/wiki/archive-plan.cjs",
     "assets/repository/scripts/wiki/build-graph.cjs", "assets/repository/scripts/wiki/check.cjs",
     "assets/repository/scripts/wiki/graph/viewer/vendor/sigma.min.js",

@@ -49,7 +49,7 @@ function main() {
   });
   server.listen(port, "127.0.0.1", () => {
     if (!fs.existsSync(graphJson)) {
-      console.log("Note: data/graph.json not found — run `pnpm graph:build` first.\n");
+      console.log("Note: data/graph.json not found — run `node scripts/wiki/build-graph.cjs` first.\n");
     }
     console.log(`Knowledge graph viewer → http://127.0.0.1:${port}/`);
     console.log("Press Ctrl+C to stop.");
