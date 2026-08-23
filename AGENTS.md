@@ -2,7 +2,7 @@
 
 ## Scope
 
-This repository packages the global `wiki` skill. The repository root is installed as `~/.agents/skills/wiki`.
+This repository packages the global `wiki` skill. The repository root is canonical and is symlinked into global agent skill directories such as `~/.agents/skills/wiki`.
 
 ## Sources of truth
 

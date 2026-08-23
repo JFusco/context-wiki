@@ -26,25 +26,39 @@ The core skill and its installed scripts use Node.js standard-library modules an
 
 ## Install globally
 
-Clone the repository into the shared global skills directory using `wiki` as the destination name:
+Clone the repository into a persistent project checkout. Keep this checkout in place because every global agent entry will resolve directly to it:
 
 ```sh
-mkdir -p ~/.agents/skills
-git clone https://github.com/JFusco/context-wiki.git ~/.agents/skills/wiki
+mkdir -p ~/Projects
+git clone https://github.com/JFusco/context-wiki.git ~/Projects/wiki
 ```
 
-Claude Code can use the same installation through a discovery symlink:
+Symlink the checkout into each agent's global skills directory:
 
 ```sh
-mkdir -p ~/.claude/skills
-ln -s ~/.agents/skills/wiki ~/.claude/skills/wiki
+mkdir -p ~/.agents/skills ~/.codex/skills ~/.claude/skills
+ln -s ~/Projects/wiki ~/.agents/skills/wiki
+ln -s ~/Projects/wiki ~/.codex/skills/wiki
+ln -s ~/Projects/wiki ~/.claude/skills/wiki
+```
+
+Each destination must be absent before linking. If an older copied installation exists, move it aside only after verifying the exact path; do not overwrite a real directory in place. When two agent skills directories already resolve to the same directory, create the link there once rather than duplicating it.
+
+Verify that every installed entry resolves to the checkout:
+
+```sh
+readlink ~/.agents/skills/wiki
+readlink ~/.codex/skills/wiki
+readlink ~/.claude/skills/wiki
 ```
 
 The canonical skill definition is then:
 
 ```text
-~/.agents/skills/wiki/SKILL.md
+~/Projects/wiki/SKILL.md
 ```
+
+Update the checkout with `git -C ~/Projects/wiki pull --ff-only`; every linked agent sees the update immediately.
 
 ## Use the skill
 
