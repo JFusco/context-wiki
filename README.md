@@ -7,7 +7,7 @@ The skill works with Codex, Claude Code, and Cursor. It keeps source code author
 ## What it provides
 
 - An idempotent, checksum-protected repository installer.
-- Shared wiki instructions in `AGENTS.md` and a thin `CLAUDE.md` import.
+- Shared wiki instructions in `AGENTS.md` and a thin `CLAUDE.md` import, preserving a pre-existing standalone `@AGENTS.md` file byte-for-byte.
 - Plan discovery across Claude, Cursor, active Codex, and archived Codex plan stores.
 - Evidence-based auditing and archiving of executed plans.
 - Topic, journal, and plan-ledger conventions for durable project history.
@@ -100,6 +100,8 @@ CLAUDE.md
 scripts/wiki/
 wiki/
 ```
+
+If `CLAUDE.md` already contains only `@AGENTS.md`, the installer treats it as compliant and leaves its bytes unchanged. Otherwise it creates or updates a managed import block so repository-specific Claude instructions can remain outside that block.
 
 It does not create a separate `.cursor/rules/wiki.mdc` file. Cursor receives the wiki contract through the managed `AGENTS.md` block.
 

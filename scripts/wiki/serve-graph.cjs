@@ -1,0 +1,60 @@
+#!/usr/bin/env node
+"use strict";
+
+const fs = require("node:fs");
+const http = require("node:http");
+const path = require("node:path");
+const { repoRoot, ensureInside } = require("./lib/common.cjs");
+
+const types = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+};
+
+function resolveRequest(root, requestUrl) {
+  try {
+    const pathname = decodeURIComponent(new URL(requestUrl, "http://127.0.0.1").pathname);
+    const requested = path.resolve(root, pathname === "/" ? "viewer/index.html" : pathname.slice(1));
+    if (!ensureInside(root, requested) || !fs.existsSync(requested)) return null;
+    const file = fs.realpathSync(requested);
+    return ensureInside(root, file) && fs.statSync(file).isFile() ? file : null;
+  } catch {
+    return null;
+  }
+}
+
+function main() {
+  const root = fs.realpathSync(path.join(repoRoot(process.cwd()), "scripts", "wiki", "graph"));
+  const port = Number(process.env.GRAPH_PORT || process.env.WIKI_GRAPH_PORT || 4173);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error("GRAPH_PORT must be an integer from 1 to 65535");
+  }
+  const graphJson = path.join(root, "data", "graph.json");
+  const server = http.createServer((req, res) => {
+    try {
+      const file = resolveRequest(root, req.url);
+      if (!file) throw new Error("not found");
+      res.writeHead(200, {
+        "Content-Type": types[path.extname(file)] || "application/octet-stream",
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+      });
+      fs.createReadStream(file).pipe(res);
+    } catch {
+      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8", "X-Content-Type-Options": "nosniff" });
+      res.end("Not found");
+    }
+  });
+  server.listen(port, "127.0.0.1", () => {
+    if (!fs.existsSync(graphJson)) {
+      console.log("Note: data/graph.json not found — run `pnpm graph:build` first.\n");
+    }
+    console.log(`Knowledge graph viewer → http://127.0.0.1:${port}/`);
+    console.log("Press Ctrl+C to stop.");
+  });
+}
+
+if (require.main === module) main();
+module.exports = { resolveRequest, main };

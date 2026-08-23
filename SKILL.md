@@ -23,13 +23,13 @@ Treat additional text as repository context or an explicit project path. Resolve
 
    `node "$SKILL_ROOT/scripts/init-repository.cjs" --repo "$PROJECT_ROOT"`
 
-   The installer upserts a managed `<!-- wiki-skill:start -->` block into **`AGENTS.md`** with the full wiki contract (Codex, Cursor, and Claude). For Claude Code it upserts a thin **`CLAUDE.md`** that imports `@AGENTS.md`; put Claude-only instructions below that block or in `.claude/CLAUDE.md`. The skill does not create `.cursor/rules/wiki.mdc`.
+   The installer upserts a managed `<!-- wiki-skill:start -->` block into **`AGENTS.md`** with the full wiki contract (Codex, Cursor, and Claude). For Claude Code it accepts an existing standalone **`CLAUDE.md`** containing only `@AGENTS.md` without changing its bytes; otherwise it upserts a thin managed import block. Put Claude-only instructions below that block or in `.claude/CLAUDE.md`. The skill does not create `.cursor/rules/wiki.mdc`.
 
 3. If the installer reports a conflict, inspect it. Do not overwrite authored wiki pages, workflows, or hooks. Resolve only the named conflict and rerun.
 4. Report when GitHub automation was skipped because the project is not a Git repository or has no GitHub remote.
 5. Remind the user that GitHub repositories need a `PR_BOT_TOKEN` secret with contents and pull-request write access.
 
-The installer is checksum-protected and idempotent. It owns repo-local scripts, viewer assets, wiki workflow templates, the managed `AGENTS.md` instruction block, a thin managed `CLAUDE.md` import of `@AGENTS.md`, and its pre-commit block. The managed hook block is advisory and fail-open, but preserves a preceding command's failure so it cannot mask blocking lint-staged or test work. It does **not** install a separate `.cursor/rules/wiki.mdc` file. Authored wiki content remains repository-owned.
+The installer is checksum-protected and idempotent. It owns repo-local scripts, viewer assets, wiki workflow templates, the managed `AGENTS.md` instruction block, a thin managed `CLAUDE.md` import of `@AGENTS.md` when a standalone import is not already present, and its pre-commit block. The managed hook block is advisory and fail-open, but preserves a preceding command's failure so it cannot mask blocking lint-staged or test work. It does **not** install a separate `.cursor/rules/wiki.mdc` file. Authored wiki content remains repository-owned.
 
 The two write workflows use the canonical Action names `Sync context wiki` and `Sync wiki issue state`. They set `GRAPHIFY_SKIP_HOOK=1` at workflow scope so bot-owned checkouts and commits do not invoke native Graphify hooks on runners where Graphify is intentionally absent. This does not change developer Graphify behavior.
 

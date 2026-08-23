@@ -1,0 +1,151 @@
+{
+  "version": 1,
+  "nodes": [
+    {
+      "id": "wiki/INDEX.md",
+      "label": "Context wiki",
+      "type": "index",
+      "x": 1,
+      "y": 0,
+      "size": 12
+    },
+    {
+      "id": "wiki/journal/2026-08-23-wiki-bootstrap-and-claude-import.md",
+      "label": "Wiki bootstrap and standalone Claude import",
+      "type": "journal",
+      "x": 0.173648,
+      "y": 0.984808,
+      "size": 8
+    },
+    {
+      "id": "wiki/MECHANICS.md",
+      "label": "Wiki mechanics",
+      "type": "index",
+      "x": 0.766044,
+      "y": 0.642788,
+      "size": 12
+    },
+    {
+      "id": "wiki/plans/2026-08-20-global-wiki-skill-and-repository-bootstrap-f45de79a63.md",
+      "label": "Global `/wiki` Skill and Repository Bootstrap",
+      "type": "plan",
+      "x": -0.5,
+      "y": 0.866025,
+      "size": 8
+    },
+    {
+      "id": "wiki/plans/2026-08-23-add-focused-cjs-unit-tests-6569724de4.md",
+      "label": "Add focused `.cjs` unit tests",
+      "type": "plan",
+      "x": -0.939693,
+      "y": 0.34202,
+      "size": 8
+    },
+    {
+      "id": "wiki/plans/2026-08-23-create-tracking-issue-and-implementation-branch-aa427de2df.md",
+      "label": "Create tracking issue and implementation branch",
+      "type": "plan",
+      "x": -0.939693,
+      "y": -0.34202,
+      "size": 8
+    },
+    {
+      "id": "wiki/plans/2026-08-23-self-host-the-wiki-with-standalone-claude-import-compatibility-37a2441a28.md",
+      "label": "Self-Host the Wiki with Standalone CLAUDE Import Compatibility",
+      "type": "plan",
+      "x": -0.5,
+      "y": -0.866025,
+      "size": 8
+    },
+    {
+      "id": "wiki/plans/INDEX.md",
+      "label": "Plan ledger",
+      "type": "index",
+      "x": 0.173648,
+      "y": -0.984808,
+      "size": 12
+    },
+    {
+      "id": "wiki/topics/installer-contract.md",
+      "label": "Installer contract",
+      "type": "topic",
+      "x": 0.766044,
+      "y": -0.642788,
+      "size": 8
+    }
+  ],
+  "edges": [
+    {
+      "id": "2da41c12bc884d8b",
+      "source": "wiki/plans/INDEX.md",
+      "target": "wiki/plans/2026-08-23-add-focused-cjs-unit-tests-6569724de4.md",
+      "relation": "link"
+    },
+    {
+      "id": "355b085344694472",
+      "source": "wiki/INDEX.md",
+      "target": "wiki/MECHANICS.md",
+      "relation": "link"
+    },
+    {
+      "id": "6054eb89bc06ebe2",
+      "source": "wiki/INDEX.md",
+      "target": "wiki/plans/INDEX.md",
+      "relation": "link"
+    },
+    {
+      "id": "722d993acefcaef5",
+      "source": "wiki/plans/INDEX.md",
+      "target": "wiki/plans/2026-08-23-self-host-the-wiki-with-standalone-claude-import-compatibility-37a2441a28.md",
+      "relation": "link"
+    },
+    {
+      "id": "8a122b9d527fc13c",
+      "source": "wiki/journal/2026-08-23-wiki-bootstrap-and-claude-import.md",
+      "target": "wiki/topics/installer-contract.md",
+      "relation": "topic"
+    },
+    {
+      "id": "ab0fa3aa04d954f8",
+      "source": "wiki/journal/2026-08-23-wiki-bootstrap-and-claude-import.md",
+      "target": "wiki/topics/installer-contract.md",
+      "relation": "link"
+    },
+    {
+      "id": "b40aeda7a1e0e956",
+      "source": "wiki/plans/INDEX.md",
+      "target": "wiki/plans/2026-08-23-create-tracking-issue-and-implementation-branch-aa427de2df.md",
+      "relation": "link"
+    },
+    {
+      "id": "b7b8001f9572be63",
+      "source": "wiki/plans/INDEX.md",
+      "target": "wiki/plans/2026-08-20-global-wiki-skill-and-repository-bootstrap-f45de79a63.md",
+      "relation": "link"
+    },
+    {
+      "id": "b9cdb8b31c299f3e",
+      "source": "wiki/plans/2026-08-23-self-host-the-wiki-with-standalone-claude-import-compatibility-37a2441a28.md",
+      "target": "wiki/topics/installer-contract.md",
+      "relation": "topic"
+    },
+    {
+      "id": "cfb02eb5135a53d3",
+      "source": "wiki/journal/2026-08-23-wiki-bootstrap-and-claude-import.md",
+      "target": "wiki/plans/2026-08-23-self-host-the-wiki-with-standalone-claude-import-compatibility-37a2441a28.md",
+      "relation": "plan"
+    },
+    {
+      "id": "e56d58329e2a8982",
+      "source": "wiki/MECHANICS.md",
+      "target": "wiki/plans/INDEX.md",
+      "relation": "link"
+    },
+    {
+      "id": "f097a2aa995f54c3",
+      "source": "wiki/journal/2026-08-23-wiki-bootstrap-and-claude-import.md",
+      "target": "wiki/plans/2026-08-23-self-host-the-wiki-with-standalone-claude-import-compatibility-37a2441a28.md",
+      "relation": "link"
+    }
+  ]
+}

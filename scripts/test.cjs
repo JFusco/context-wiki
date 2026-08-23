@@ -47,6 +47,18 @@ test("non-Git initialization is complete, valid, and idempotent", () => {
   assert.equal(node(path.join(root, "scripts/wiki/check.cjs"), ["--repo", root], { cwd: root }).status, 0);
 });
 
+test("standalone CLAUDE import remains byte-identical and installer-clean", () => {
+  const root = temp("standalone-claude-import");
+  const claude = path.join(root, "CLAUDE.md");
+  write(claude, "@AGENTS.md\n");
+  const first = init(root);
+  assert.equal(first.status, 0, first.stderr);
+  assert.equal(fs.readFileSync(claude, "utf8"), "@AGENTS.md\n");
+  const dryRun = init(root, ["--dry-run"]);
+  assert.equal(dryRun.status, 0, dryRun.stderr);
+  assert.equal(fs.readFileSync(claude, "utf8"), "@AGENTS.md\n");
+});
+
 test("dry-run reports drift without writes and installer refuses symbolic-link escapes", () => {
   const dryRoot = temp("dry-run");
   const dry = init(dryRoot, ["--dry-run"]);

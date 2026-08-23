@@ -1,0 +1,30 @@
+name: Wiki integrity
+
+on:
+  pull_request:
+  push:
+    branches-ignore: ["bot/wiki-**"]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Validate wiki
+        run: node scripts/wiki/check.cjs
+      - name: Warn when substantive PRs omit a journal
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          files="$(gh pr view "$PR_NUMBER" --json files --jq '.files[].path')"
+          if { printf '%s\n' "$files" | grep -Eq '^(AGENTS|CLAUDE)\.md$' || printf '%s\n' "$files" | grep -Eqv '^(wiki/|scripts/wiki/|\.github/workflows/wiki-|.*\.md$)'; } && ! printf '%s\n' "$files" | grep -q '^wiki/journal/'; then
+            echo '::warning::Substantive changes have no wiki journal entry.'
+          fi
