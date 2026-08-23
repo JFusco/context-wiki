@@ -13,6 +13,7 @@ const BLOCK_START = "<!-- wiki-skill:start -->";
 const BLOCK_END = "<!-- wiki-skill:end -->";
 const HOOK_START = "# wiki-skill:start";
 const HOOK_END = "# wiki-skill:end";
+const AUTHORED_SEED_FILES = new Set(["wiki/plans/INDEX.md"]);
 
 function parseArgs(argv) {
   const out = { repo: process.cwd(), dryRun: false, github: "auto" };
@@ -160,6 +161,14 @@ function installAssets({ root, includeGithub, dryRun, changes, conflicts }) {
     const target = path.join(root, rel);
     const sourceBytes = fs.readFileSync(source);
     const sourceHash = sha(sourceBytes);
+    if (AUTHORED_SEED_FILES.has(rel)) {
+      if (hasSymlinkComponent(root, target)) conflicts.push(`${rel} (symlink path)`);
+      else if (!fs.existsSync(target)) {
+        changes.push(`created ${rel}`);
+        if (!dryRun) atomicWrite(target, sourceBytes);
+      } else if (!fs.lstatSync(target).isFile()) conflicts.push(`${rel} (not a regular file)`);
+      continue;
+    }
     if (hasSymlinkComponent(root, target)) {
       conflicts.push(`${rel} (symlink path)`);
       if (previous.files[rel]) nextFiles[rel] = previous.files[rel];
@@ -199,7 +208,7 @@ function installAssets({ root, includeGithub, dryRun, changes, conflicts }) {
     if (previous.files[rel]) nextFiles[rel] = previous.files[rel];
   }
   for (const rel of Object.keys(previous.files)) {
-    if (nextFiles[rel]) continue;
+    if (nextFiles[rel] || AUTHORED_SEED_FILES.has(rel)) continue;
     const target = path.join(root, rel);
     if (!fs.existsSync(target)) continue;
     if (hasSymlinkComponent(root, target)) {
@@ -266,7 +275,15 @@ function installHook(root, dryRun, changes, warnings) {
       warnings.push(`active core.hooksPath is outside the repository; hook not changed: ${configured}`);
       return null;
     }
-    target = path.join(hookDir, "pre-commit");
+    const huskyRunner = path.join(hookDir, "h");
+    const husky9Layout = path.basename(hookDir) === "_"
+      && path.basename(path.dirname(hookDir)) === ".husky"
+      && fs.existsSync(huskyRunner)
+      && fs.lstatSync(huskyRunner).isFile()
+      && !fs.lstatSync(huskyRunner).isSymbolicLink();
+    target = husky9Layout
+      ? path.join(path.dirname(hookDir), "pre-commit")
+      : path.join(hookDir, "pre-commit");
   } else if (fs.existsSync(husky)) {
     target = husky;
   } else {

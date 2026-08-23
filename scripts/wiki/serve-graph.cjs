@@ -25,14 +25,8 @@ function resolveRequest(root, requestUrl) {
   }
 }
 
-function main() {
-  const root = fs.realpathSync(path.join(repoRoot(process.cwd()), "scripts", "wiki", "graph"));
-  const port = Number(process.env.GRAPH_PORT || process.env.WIKI_GRAPH_PORT || 4173);
-  if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    throw new Error("GRAPH_PORT must be an integer from 1 to 65535");
-  }
-  const graphJson = path.join(root, "data", "graph.json");
-  const server = http.createServer((req, res) => {
+function createServer(root) {
+  return http.createServer((req, res) => {
     try {
       const file = resolveRequest(root, req.url);
       if (!file) throw new Error("not found");
@@ -47,14 +41,44 @@ function main() {
       res.end("Not found");
     }
   });
-  server.listen(port, "127.0.0.1", () => {
-    if (!fs.existsSync(graphJson)) {
-      console.log("Note: data/graph.json not found — run `pnpm graph:build` first.\n");
+}
+
+function listen(root, requestedPort, allowFallback = true, serverFactory = () => createServer(root)) {
+  return new Promise((resolve, reject) => {
+    function attempt(port) {
+      const server = serverFactory();
+      server.once("error", (error) => {
+        if (allowFallback && error.code === "EADDRINUSE" && port < 65535) {
+          attempt(port + 1);
+          return;
+        }
+        reject(error);
+      });
+      server.listen(port, "127.0.0.1", () => resolve({ server, port }));
     }
-    console.log(`Knowledge graph viewer → http://127.0.0.1:${port}/`);
-    console.log("Press Ctrl+C to stop.");
+    attempt(requestedPort);
   });
 }
 
-if (require.main === module) main();
-module.exports = { resolveRequest, main };
+async function main() {
+  const root = fs.realpathSync(path.join(repoRoot(process.cwd()), "scripts", "wiki", "graph"));
+  const configuredPort = process.env.GRAPH_PORT || process.env.WIKI_GRAPH_PORT;
+  const port = Number(configuredPort || 4173);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error("GRAPH_PORT must be an integer from 1 to 65535");
+  }
+  const graphJson = path.join(root, "data", "graph.json");
+  const result = await listen(root, port, !configuredPort);
+  if (!fs.existsSync(graphJson)) {
+    console.log("Note: data/graph.json not found — run `node scripts/wiki/build-graph.cjs` first.\n");
+  }
+  if (result.port !== port) console.log(`Port ${port} is in use; selected ${result.port}.`);
+  console.log(`Knowledge graph viewer → http://127.0.0.1:${result.port}/`);
+  console.log("Press Ctrl+C to stop.");
+}
+
+if (require.main === module) main().catch((error) => {
+  console.error(`FAIL ${error.message}`);
+  process.exitCode = 1;
+});
+module.exports = { resolveRequest, createServer, listen, main };

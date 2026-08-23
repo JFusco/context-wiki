@@ -9,7 +9,8 @@ function main() {
   const root = path.resolve(__dirname, "..");
   const errors = [];
   const required = [
-    "SKILL.md", "agents/openai.yaml", "scripts/init-repository.cjs", "scripts/update-repository.cjs", "scripts/test.cjs", "assets/repository/wiki/INDEX.md",
+    "SKILL.md", "package.json", "pnpm-lock.yaml", ".env.example", ".github/workflows/pr.yml", ".husky/commit-msg", ".husky/prepare-commit-msg",
+    "agents/openai.yaml", "scripts/init-repository.cjs", "scripts/update-repository.cjs", "scripts/test.cjs", "assets/repository/wiki/INDEX.md",
     "assets/repository/scripts/wiki/discover-plans.cjs", "assets/repository/scripts/wiki/archive-plan.cjs",
     "assets/repository/scripts/wiki/build-graph.cjs", "assets/repository/scripts/wiki/check.cjs",
     "assets/repository/scripts/wiki/graph/viewer/vendor/sigma.min.js",
@@ -25,9 +26,11 @@ function main() {
   if (process.argv.includes("--global")) {
     const canonical = path.join(os.homedir(), ".agents", "skills", "wiki");
     const claude = path.join(os.homedir(), ".claude", "skills", "wiki");
-    if (path.resolve(root) !== path.resolve(canonical)) errors.push(`skill is not at canonical path ${canonical}`);
     try {
-      if (!fs.lstatSync(claude).isSymbolicLink() || fs.realpathSync(claude) !== fs.realpathSync(canonical)) errors.push("Claude skill link does not target the canonical skill");
+      if (fs.realpathSync(root) !== fs.realpathSync(canonical)) errors.push(`skill does not resolve from canonical path ${canonical}`);
+    } catch { errors.push(`canonical skill path is missing or unreadable: ${canonical}`); }
+    try {
+      if (!fs.lstatSync(claude).isSymbolicLink() || fs.realpathSync(claude) !== fs.realpathSync(root)) errors.push("Claude skill link does not target the canonical skill");
     } catch { errors.push("Claude skill link is missing or unreadable"); }
   }
   if (errors.length) { errors.forEach((error) => console.error(`FAIL ${error}`)); return 2; }

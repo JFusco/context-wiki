@@ -9,7 +9,7 @@ The skill works with Codex, Claude Code, and Cursor. It keeps source code author
 - An idempotent, checksum-protected repository installer.
 - Shared wiki instructions in `AGENTS.md` and a thin `CLAUDE.md` import, preserving a pre-existing standalone `@AGENTS.md` file byte-for-byte.
 - Plan discovery across Claude, Cursor, active Codex, and archived Codex plan stores.
-- Evidence-based auditing and archiving of executed plans.
+- Evidence-based auditing and topic-linked archiving of executed plans.
 - Topic, journal, and plan-ledger conventions for durable project history.
 - A deterministic Sigma.js graph containing only Markdown pages under `wiki/`.
 - Wiki validation, pre-commit integration, and optional GitHub Actions.
@@ -17,12 +17,38 @@ The skill works with Codex, Claude Code, and Cursor. It keeps source code author
 
 ## Requirements
 
-- A recent Node.js runtime.
+- Node.js 24.14.0 or newer.
 - Git for hooks, history inspection, and repository-root detection.
 - Optional: GitHub CLI (`gh`) for stronger merged-PR evidence during plan audits.
-- Optional: `pnpm` when the target repository exposes the `graph:build` and `graph:view` aliases.
+- pnpm 10 when developing this package or using its root command aliases. Installed target repositories can use the direct Node.js commands without installing dependencies.
 
 The core skill and its installed scripts use Node.js standard-library modules and do not require an `npm install`.
+
+## Package commands
+
+This repository declares Sigma and Graphology as pinned runtime dependencies for local development while continuing to ship vendored browser assets to target repositories:
+
+```sh
+pnpm install
+pnpm test
+pnpm graph:build
+pnpm graph:view
+```
+
+The local viewer starts at <http://127.0.0.1:4173/> and advances to the next available port when needed. Target repositories do not receive this `package.json`; their installed viewer remains self-contained.
+
+## Repository automation
+
+The canonical checkout uses `@verndale/ai-commit` for Conventional Commit generation and validation and `@verndale/ai-pr` for deterministic pull-request creation:
+
+```sh
+pnpm exec ai-commit init
+pnpm exec ai-pr init
+```
+
+Initialization adds `pnpm commit`, `pnpm pr:create`, Husky commit-message hooks, `.env.example`, and `.github/workflows/pr.yml`. Local `.env` and `.env.local` files are ignored. Set `OPENAI_API_KEY` for AI commit generation and `GH_TOKEN` or `GITHUB_TOKEN` for local PR creation.
+
+Husky 9 dispatches Git hooks through `.husky/_`; the wiki installer attaches its advisory pre-commit block to `.husky/pre-commit`, where the runner can execute it. The PR workflow requires the `PR_BOT_TOKEN` repository secret.
 
 ## Install globally
 
@@ -30,16 +56,16 @@ Clone the repository into a persistent project checkout. Keep this checkout in p
 
 ```sh
 mkdir -p ~/Projects
-git clone https://github.com/JFusco/context-wiki.git ~/Projects/wiki
+git clone https://github.com/JFusco/context-wiki.git ~/Projects/context-wiki
 ```
 
 Symlink the checkout into each agent's global skills directory:
 
 ```sh
 mkdir -p ~/.agents/skills ~/.codex/skills ~/.claude/skills
-ln -s ~/Projects/wiki ~/.agents/skills/wiki
-ln -s ~/Projects/wiki ~/.codex/skills/wiki
-ln -s ~/Projects/wiki ~/.claude/skills/wiki
+ln -s ~/Projects/context-wiki ~/.agents/skills/wiki
+ln -s ~/Projects/context-wiki ~/.codex/skills/wiki
+ln -s ~/Projects/context-wiki ~/.claude/skills/wiki
 ```
 
 Each destination must be absent before linking. If an older copied installation exists, move it aside only after verifying the exact path; do not overwrite a real directory in place. When two agent skills directories already resolve to the same directory, create the link there once rather than duplicating it.
@@ -109,7 +135,7 @@ It does not create a separate `.cursor/rules/wiki.mdc` file. Cursor receives the
 
 For substantive work, the installed contract expects the implementing change and its context update to ship together:
 
-1. Archive the executed plan with delivery evidence.
+1. Archive the executed plan with delivery evidence and at least one existing topic.
 2. Add a chronological journal entry.
 3. Update the affected topic page with the durable decision.
 4. Rebuild and validate the graph.
@@ -117,12 +143,15 @@ For substantive work, the installed contract expects the implementing change and
 The reliable direct commands are:
 
 ```sh
+node scripts/wiki/archive-plan.cjs path/to/plan.md --status implemented --evidence "PR #123" --topic topic-slug
 node scripts/wiki/build-graph.cjs
 node scripts/wiki/check.cjs
 node scripts/wiki/serve-graph.cjs
 ```
 
-The viewer is served at <http://127.0.0.1:4173/> by default. Set `GRAPH_PORT` to use another port.
+Implemented and partial archives without a topic are rejected by both the archive/audit path and `wiki check`. Historical rows that were not executed may remain topicless.
+
+The viewer starts at <http://127.0.0.1:4173/> by default. If that port is occupied, it automatically selects the next available port and prints the actual URL, so graphs from multiple repositories can run together. Set `GRAPH_PORT` to require a specific port instead. Its Sigma.js presentation uses the same dark control shell, ForceAtlas2 network layout, search, type toggles, neighborhood focus, and detail panel pattern as the Build Orchestration graph. The deterministic circular coordinates in `graph.json` are only a safe seed; the browser settles them into the readable network layout.
 
 ## GitHub automation
 
@@ -153,3 +182,5 @@ assets/repository/          Files installed into a target repository
 ```
 
 Authored wiki content remains owned by the target repository. Managed mechanics are updated only when their recorded checksum still matches; otherwise the installer reports a conflict for review.
+
+`wiki/plans/INDEX.md` is a create-only seed rather than a checksum-managed asset. After initialization, archive and audit tools own its authored rows, so routine installer reconciliation preserves the ledger without reporting it as drift.

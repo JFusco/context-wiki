@@ -73,6 +73,7 @@ function validateArchiveInput(root, item, audit) {
   const evidence = stringList("evidence", audit.evidence || []);
   const topics = stringList("topics", audit.topics || [], true);
   if (["implemented", "partial"].includes(audit.status) && !evidence.length) throw new Error(`${audit.status} requires implementation evidence`);
+  if (["implemented", "partial"].includes(audit.status) && !topics.length) throw new Error(`${audit.status} requires at least one topic`);
   if (topics.some((topic) => topic.split(/[\\/]/).includes("..") || path.isAbsolute(topic))) throw new Error("topics must not escape wiki/topics");
   for (const topic of topics) {
     const relative = topic.startsWith("wiki/topics/") ? topic.slice("wiki/topics/".length) : topic;

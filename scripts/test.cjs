@@ -29,6 +29,37 @@ function makeGit(name, remote = "") {
 }
 function write(file, body) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, body); }
 
+test("package manifest exposes the Sigma graph workflow", () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(SKILL, "package.json"), "utf8"));
+  assert.equal(manifest.private, true);
+  assert.equal(manifest.type, "commonjs");
+  assert.equal(manifest.dependencies.sigma, "3.0.3");
+  assert.equal(manifest.dependencies.graphology, "0.26.0");
+  assert.equal(manifest.devDependencies["@verndale/ai-commit"], "2.7.0");
+  assert.equal(manifest.devDependencies["@verndale/ai-pr"], "1.3.5");
+  assert.equal(manifest.engines.node, ">=24.14.0");
+  assert.equal(manifest.scripts["graph:build"], "node scripts/wiki/build-graph.cjs");
+  assert.equal(manifest.scripts["graph:view"], "node scripts/wiki/serve-graph.cjs");
+  assert.equal(manifest.scripts.commit, "ai-commit run");
+  assert.equal(manifest.scripts["pr:create"], "ai-pr");
+  assert.equal(manifest.scripts.prepare, "husky");
+  for (const relative of [".env.example", ".github/workflows/pr.yml", ".husky/commit-msg", ".husky/prepare-commit-msg"]) {
+    assert.ok(fs.existsSync(path.join(SKILL, relative)), relative);
+  }
+});
+
+test("global validation accepts a persistent checkout reached through discovery symlinks", () => {
+  const home = temp("global-links");
+  const agents = path.join(home, ".agents", "skills");
+  const claude = path.join(home, ".claude", "skills");
+  fs.mkdirSync(agents, { recursive: true });
+  fs.mkdirSync(claude, { recursive: true });
+  fs.symlinkSync(SKILL, path.join(agents, "wiki"), "dir");
+  fs.symlinkSync(SKILL, path.join(claude, "wiki"), "dir");
+  const result = node(path.join(SKILL, "scripts", "validate-install.cjs"), ["--global"], { cwd: SKILL, env: { HOME: home } });
+  assert.equal(result.status, 0, result.stderr);
+});
+
 test("non-Git initialization is complete, valid, and idempotent", () => {
   const root = temp("nongit");
   const first = init(root);
@@ -41,9 +72,13 @@ test("non-Git initialization is complete, valid, and idempotent", () => {
   }
   assert.ok(!fs.existsSync(path.join(root, ".github")));
   const before = fs.readFileSync(path.join(root, "wiki/.wiki-kit.json"), "utf8");
+  const ledger = path.join(root, "wiki/plans/INDEX.md");
+  fs.appendFileSync(ledger, "\nAuthored ledger content.\n");
   const second = init(root);
   assert.equal(second.status, 0, second.stderr);
   assert.equal(fs.readFileSync(path.join(root, "wiki/.wiki-kit.json"), "utf8"), before);
+  assert.match(fs.readFileSync(ledger, "utf8"), /Authored ledger content/);
+  assert.ok(!JSON.parse(before).files["wiki/plans/INDEX.md"], "the authored plan ledger must not be checksum-managed");
   assert.equal(node(path.join(root, "scripts/wiki/check.cjs"), ["--repo", root], { cwd: root }).status, 0);
 });
 
@@ -120,6 +155,15 @@ test("Husky and safe custom hook paths are extended; external paths are untouche
   const advisory = run(huskyHook, [], { cwd: huskyRoot, env: { WIKI_HOME: temp("hook-advisory-home") } });
   assert.equal(advisory.status, 0, "wiki lifecycle failures must remain advisory");
   assert.match(advisory.stderr, /warning: wiki lifecycle failed; continuing/);
+  const husky9Root = makeGit("husky-9");
+  write(path.join(husky9Root, ".husky/_/h"), "#!/usr/bin/env sh\nexit 0\n");
+  write(path.join(husky9Root, ".husky/_/pre-commit"), "#!/usr/bin/env sh\n. \"$(dirname \"$0\")/h\"\n");
+  git(husky9Root, ["config", "--local", "core.hooksPath", ".husky/_"]);
+  const husky9 = init(husky9Root);
+  assert.equal(husky9.status, 0, husky9.stderr);
+  assert.equal(fs.readFileSync(path.join(husky9Root, ".husky/_/pre-commit"), "utf8"), "#!/usr/bin/env sh\n. \"$(dirname \"$0\")/h\"\n");
+  assert.match(fs.readFileSync(path.join(husky9Root, ".husky/pre-commit"), "utf8"), /wiki-skill:start/);
+  assert.match(husky9.stdout, /hook: \.husky\/pre-commit/);
   const customRoot = makeGit("custom");
   git(customRoot, ["config", "--local", "core.hooksPath", ".config/hooks"]);
   assert.equal(init(customRoot).status, 0);
@@ -208,6 +252,7 @@ test("proposedPlans keeps the last Codex plan revision per title", () => {
 
 test("audit requires evidence, archives executed bodies, keeps non-executed rows, and avoids title collisions", () => {
   const root = temp("audit"); assert.equal(init(root).status, 0);
+  write(path.join(root, "wiki/topics/testing.md"), "# Testing\n");
   const bodyA = "# Same | [title]\n\nFirst body.\n"; const bodyB = "# Same | [title]\n\nSecond body.\n"; const bodyC = "# Skipped title\n\nThird body.\n";
   const hash = (body) => require("node:crypto").createHash("sha256").update(body).digest("hex");
   const manifest = { candidates: [
@@ -218,9 +263,12 @@ test("audit requires evidence, archives executed bodies, keeps non-executed rows
   const manifestFile = path.join(root, ".manifest.json"); write(manifestFile, JSON.stringify(manifest));
   const badAudit = path.join(root, ".bad.json"); write(badAudit, JSON.stringify({ entries: [{ id: "a", status: "implemented", evidence: [] }] }));
   assert.equal(node(path.join(root, "scripts/wiki/apply-plan-audit.cjs"), ["--manifest", manifestFile, "--audit", badAudit, "--repo", root], { cwd: root }).status, 2);
+  const topiclessAudit = path.join(root, ".topicless.json"); write(topiclessAudit, JSON.stringify({ entries: [{ id: "a", status: "implemented", evidence: ["ok"], topics: [] }] }));
+  const topicless = node(path.join(root, "scripts/wiki/apply-plan-audit.cjs"), ["--manifest", manifestFile, "--audit", topiclessAudit, "--repo", root], { cwd: root });
+  assert.equal(topicless.status, 2); assert.match(topicless.stderr, /implemented requires at least one topic/);
   const goodAudit = path.join(root, ".good.json"); write(goodAudit, JSON.stringify({ entries: [
-    { id: hash(bodyA), status: "implemented", evidence: ["test:fixture | passed"], topics: [] },
-    { id: "b", status: "implemented", evidence: ["test:fixture-2"], topics: [] },
+    { id: hash(bodyA), status: "implemented", evidence: ["test:fixture | passed"], topics: ["testing"] },
+    { id: "b", status: "implemented", evidence: ["test:fixture-2"], topics: ["testing"] },
     { id: "c", status: "not-implemented", evidence: [], topics: [] },
   ] }));
   assert.equal(node(path.join(root, "scripts/wiki/apply-plan-audit.cjs"), ["--manifest", manifestFile, "--audit", goodAudit, "--repo", root], { cwd: root }).status, 0);
@@ -243,6 +291,7 @@ test("audit requires evidence, archives executed bodies, keeps non-executed rows
 
 test("audit preflight is transactional and rejects forged digests and path-traversal dates", () => {
   const root = temp("audit-hostile"); assert.equal(init(root).status, 0);
+  write(path.join(root, "wiki/topics/runtime.md"), "# Runtime\n");
   const hash = (body) => require("node:crypto").createHash("sha256").update(body).digest("hex");
   const first = "# First\n\nBody.\n"; const second = "# Second\n\nBody.\n";
   const manifest = { candidates: [
@@ -251,8 +300,8 @@ test("audit preflight is transactional and rejects forged digests and path-trave
   ] };
   const manifestFile = path.join(root, "manifest.json"); write(manifestFile, JSON.stringify(manifest));
   const auditFile = path.join(root, "audit.json"); write(auditFile, JSON.stringify({ entries: [
-    { id: "first", status: "implemented", evidence: ["ok"], topics: [] },
-    { id: "second", status: "implemented", evidence: ["ok"], topics: [], date: "../../escape" },
+    { id: "first", status: "implemented", evidence: ["ok"], topics: ["runtime"] },
+    { id: "second", status: "implemented", evidence: ["ok"], topics: ["runtime"], date: "../../escape" },
   ] }));
   const before = fs.readFileSync(path.join(root, "wiki/plans/INDEX.md"), "utf8");
   const result = node(path.join(root, "scripts/wiki/apply-plan-audit.cjs"), ["--manifest", manifestFile, "--audit", auditFile, "--repo", root], { cwd: root });
@@ -260,7 +309,7 @@ test("audit preflight is transactional and rejects forged digests and path-trave
   assert.equal(fs.readFileSync(path.join(root, "wiki/plans/INDEX.md"), "utf8"), before);
   assert.deepEqual(fs.readdirSync(path.join(root, "wiki/plans")), ["INDEX.md"]);
   manifest.candidates[0].digest = "0".repeat(64); write(manifestFile, JSON.stringify(manifest));
-  write(auditFile, JSON.stringify({ entries: [{ id: "first", status: "implemented", evidence: ["ok"], topics: [] }] }));
+  write(auditFile, JSON.stringify({ entries: [{ id: "first", status: "implemented", evidence: ["ok"], topics: ["runtime"] }] }));
   assert.equal(node(path.join(root, "scripts/wiki/apply-plan-audit.cjs"), ["--manifest", manifestFile, "--audit", auditFile, "--repo", root], { cwd: root }).status, 2);
 });
 
@@ -286,12 +335,18 @@ test("graph is wiki-only, byte-stable, typed, and rejects dangling relationships
   const linked = node(build, ["--repo", root], { cwd: root });
   assert.equal(linked.status, 2); assert.match(linked.stderr, /symbolic links are not allowed/);
   const viewer = fs.readFileSync(path.join(root, "scripts/wiki/graph/viewer/index.html"), "utf8");
-  for (const type of ["index", "topic", "journal", "plan"]) assert.match(viewer, new RegExp(`value="${type}"`));
+  for (const id of ["controls", "search", "toggle-all", "legend", "reset", "graph", "panel", "p-neighbors"]) {
+    assert.match(viewer, new RegExp(`id="${id}"`));
+  }
+  for (const asset of ["/viewer/viewer.css", "/viewer/vendor/graphology.umd.min.js", "/viewer/vendor/graphology-library.min.js", "/viewer/vendor/sigma.min.js", "/viewer/viewer.js"]) {
+    assert.match(viewer, new RegExp(`(?:href|src)="${asset.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`));
+  }
 });
 
-test("archived plan repo-file links do not break graph build", () => {
+test("archived plan repo-file links remain safe and topicless archives fail validation", () => {
   const root = temp("plan-repo-links");
   assert.equal(init(root).status, 0);
+  write(path.join(root, "wiki/topics/documentation.md"), "# Documentation\n");
   const crypto = require("node:crypto");
   const body = "# Add CONTRIBUTING\n\nCreate `[CONTRIBUTING.md](CONTRIBUTING.md)` and see [mechanics](../MECHANICS.md).\n";
   const planDigest = crypto.createHash("sha256").update(body).digest("hex");
@@ -302,7 +357,7 @@ test("archived plan repo-file links do not break graph build", () => {
     'evidence: ["CONTRIBUTING.md shipped"]',
     'source_tool: "repository"',
     'source: "repository:test.plan.md"',
-    "topics: []",
+    "topics: [documentation]",
     `digest: "${planDigest}"`,
     "---",
     "",
@@ -311,7 +366,7 @@ test("archived plan repo-file links do not break graph build", () => {
   ].join("\n"));
   const marker = "<!-- wiki-plan-rows -->";
   const index = fs.readFileSync(path.join(root, "wiki/plans/INDEX.md"), "utf8");
-  const row = `| 2026-01-01 | [Add CONTRIBUTING](./2026-01-01-contributing.md) | implemented | CONTRIBUTING.md shipped | — <!-- plan:${planDigest} --> |`;
+  const row = `| 2026-01-01 | [Add CONTRIBUTING](./2026-01-01-contributing.md) | implemented | CONTRIBUTING.md shipped | documentation <!-- plan:${planDigest} --> |`;
   fs.writeFileSync(path.join(root, "wiki/plans/INDEX.md"), index.replace(marker, `${row}\n${marker}`));
   const build = path.join(root, "scripts/wiki/build-graph.cjs");
   assert.equal(node(build, ["--repo", root], { cwd: root }).status, 0);
@@ -319,6 +374,11 @@ test("archived plan repo-file links do not break graph build", () => {
   assert.ok(graph.edges.some((edge) => edge.source.startsWith("wiki/plans/") && edge.target === "wiki/MECHANICS.md"));
   assert.ok(!graph.nodes.some((node) => node.id === "wiki/plans/CONTRIBUTING.md"));
   assert.equal(node(path.join(root, "scripts/wiki/check.cjs"), ["--repo", root], { cwd: root }).status, 0);
+  const archive = path.join(root, "wiki/plans/2026-01-01-contributing.md");
+  fs.writeFileSync(archive, fs.readFileSync(archive, "utf8").replace("topics: [documentation]", "topics: []"));
+  assert.equal(node(build, ["--repo", root], { cwd: root }).status, 0);
+  const topicless = node(path.join(root, "scripts/wiki/check.cjs"), ["--repo", root], { cwd: root });
+  assert.equal(topicless.status, 2); assert.match(topicless.stderr, /at least one topic is required/);
 });
 
 test("audit-plan-candidates drafts matched rows using git without shell format strings", () => {
@@ -487,42 +547,100 @@ test("graph server resolver refuses traversal and symbolic-link disclosure", () 
   assert.equal(resolveRequest(graphRoot, "/leak.txt"), null);
   assert.equal(resolveRequest(graphRoot, "/../../etc/passwd"), null);
   assert.equal(resolveRequest(graphRoot, "/data/graph.json"), path.join(graphRoot, "data/graph.json"));
+  assert.equal(resolveRequest(graphRoot, "/viewer/viewer.css"), path.join(graphRoot, "viewer/viewer.css"));
+  assert.equal(resolveRequest(graphRoot, "/viewer.css"), null);
 });
 
-test("Sigma viewer loads all four wiki node types and applies search/type filters", async () => {
-  const source = fs.readFileSync(path.join(SKILL, "assets/repository/scripts/wiki/graph/viewer/viewer.js"), "utf8");
-  const listeners = {};
-  const elements = {
-    graph: {}, search: { value: "", addEventListener(name, fn) { listeners[`search:${name}`] = fn; } },
-    details: { textContent: "" },
-  };
-  const checks = ["index", "topic", "journal", "plan"].map((value) => ({ value, checked: true, addEventListener(name, fn) { listeners[`${value}:${name}`] = fn; } }));
-  class Graph {
-    constructor() { this.nodes = new Map(); }
-    addNode(id, attrs) { this.nodes.set(id, attrs); }
-    addEdgeWithKey() {}
-    getNodeAttributes(id) { return this.nodes.get(id); }
+test("graph server selects the next port unless a port was explicitly requested", async () => {
+  const { EventEmitter } = require("node:events");
+  const root = temp("server-port");
+  assert.equal(init(root).status, 0);
+  const graphRoot = fs.realpathSync(path.join(root, "scripts/wiki/graph"));
+  const { listen } = require(path.join(root, "scripts/wiki/serve-graph.cjs"));
+  class FakeServer extends EventEmitter {
+    listen(port, host, callback) {
+      this.port = port;
+      queueMicrotask(() => {
+        if (port === 4173) this.emit("error", Object.assign(new Error("occupied"), { code: "EADDRINUSE" }));
+        else callback();
+      });
+    }
   }
-  let renderer;
+  const fallback = await listen(graphRoot, 4173, true, () => new FakeServer());
+  assert.equal(fallback.port, 4174);
+  await assert.rejects(listen(graphRoot, 4173, false, () => new FakeServer()), (error) => error.code === "EADDRINUSE");
+});
+
+test("Sigma viewer matches the reference shell, runs ForceAtlas2, and applies search/type/focus reducers", async () => {
+  const source = fs.readFileSync(path.join(SKILL, "assets/repository/scripts/wiki/graph/viewer/viewer.js"), "utf8");
+  function element() {
+    const classes = new Set();
+    return {
+      value: "", textContent: "", className: "", dataset: {}, style: {}, children: [], listeners: {},
+      classList: {
+        add: (...names) => names.forEach((name) => classes.add(name)),
+        remove: (...names) => names.forEach((name) => classes.delete(name)),
+        toggle: (name, enabled) => enabled ? classes.add(name) : classes.delete(name),
+        contains: (name) => classes.has(name),
+      },
+      addEventListener(name, fn) { this.listeners[name] = fn; },
+      append(...children) { this.children.push(...children); },
+      appendChild(child) { this.children.push(child); return child; },
+      replaceChildren(...children) { this.children = children; },
+      setAttribute(name, value) { this[name] = value; },
+    };
+  }
+  const ids = ["stats", "search", "legend", "reset", "toggle-all", "panel-close", "panel", "graph", "p-label", "p-type", "p-meta", "p-neighbors"];
+  const elements = Object.fromEntries(ids.map((id) => [id, element()]));
+  const document = {
+    querySelector: (selector) => elements[selector.slice(1)],
+    querySelectorAll: (selector) => selector === ".legend-item" ? elements.legend.children : [],
+    createElement: () => element(),
+  };
+  class MultiGraph {
+    constructor() { this.nodes = new Map(); this.edges = new Map(); }
+    get order() { return this.nodes.size; }
+    addNode(id, attrs) { this.nodes.set(id, attrs); }
+    hasNode(id) { return this.nodes.has(id); }
+    addEdgeWithKey(id, source, target, attrs) { this.edges.set(id, { source, target, attrs }); }
+    degree(id) { return [...this.edges.values()].filter((edge) => edge.source === id || edge.target === id).length; }
+    forEachNode(fn) { for (const [id, attrs] of this.nodes) fn(id, attrs); }
+    setNodeAttribute(id, name, value) { this.nodes.get(id)[name] = value; }
+    extremities(id) { const edge = this.edges.get(id); return [edge.source, edge.target]; }
+  }
+  let renderer, circularCalls = 0, forceCalls = 0;
   class Sigma {
-    constructor(graph) { this.graph = graph; this.settings = {}; this.handlers = {}; renderer = this; }
-    setSetting(name, value) { this.settings[name] = value; }
+    constructor(graph, target, settings) { this.graph = graph; this.target = target; this.settings = settings; this.handlers = {}; renderer = this; }
     refresh() {}
     on(name, fn) { this.handlers[name] = fn; }
+    getCamera() { return { animate() {}, animatedReset() {} }; }
+    getNodeDisplayData(id) { return this.graph.nodes.get(id); }
   }
   const nodes = ["index", "topic", "journal", "plan"].map((type, i) => ({ id: `wiki/${type}-${i}.md`, label: type, type, x: i, y: i, size: 8 }));
+  const edges = [{ id: "edge-1", source: "wiki/topic-1.md", target: "wiki/plan-3.md", relation: "topic" }];
+  const window = {};
   vm.runInNewContext(source, {
-    fetch: async () => ({ ok: true, json: async () => ({ nodes, edges: [] }) }), graphology: { Graph }, Sigma,
-    document: { getElementById: (id) => elements[id], querySelectorAll: () => checks }, console,
+    fetch: async () => ({ ok: true, json: async () => ({ nodes, edges }) }),
+    graphology: { MultiGraph },
+    graphologyLibrary: {
+      layout: { circular: { assign() { circularCalls++; } } },
+      layoutForceAtlas2: { inferSettings: () => ({}), assign() { forceCalls++; } },
+    },
+    Sigma, document, window, console, Map, Set,
   });
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.equal(renderer.graph.nodes.size, 4);
-  elements.search.value = "topic"; listeners["search:input"]();
-  assert.equal(renderer.settings.nodeReducer("wiki/plan-3.md", renderer.graph.nodes.get("wiki/plan-3.md")).hidden, true);
-  checks.find((item) => item.value === "topic").checked = false; listeners["topic:change"]();
+  assert.equal(circularCalls, 1);
+  assert.equal(forceCalls, 1);
+  elements.search.listeners.input({ target: { value: "topic" } });
+  assert.equal(renderer.settings.nodeReducer("wiki/plan-3.md", renderer.graph.nodes.get("wiki/plan-3.md")).label, "");
+  const topicLegend = elements.legend.children.find((item) => item.dataset.type === "topic");
+  topicLegend.listeners.click();
   assert.equal(renderer.settings.nodeReducer("wiki/topic-1.md", renderer.graph.nodes.get("wiki/topic-1.md")).hidden, true);
   renderer.handlers.clickNode({ node: "wiki/topic-1.md" });
-  assert.equal(elements.details.textContent, "topic\nwiki/topic-1.md\nType: topic");
+  assert.equal(elements["p-label"].textContent, "topic");
+  assert.equal(elements.panel.classList.contains("hidden"), false);
+  assert.equal(window.WikiGraph.state.focus, "wiki/topic-1.md");
   assert.doesNotMatch(source, /innerHTML/);
 });
 
