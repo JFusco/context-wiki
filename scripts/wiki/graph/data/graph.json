@@ -78,9 +78,15 @@
           "kind": "issue",
           "number": 7,
           "url": "https://github.com/jfusco/context-wiki/issues/7"
+        },
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "pull-request",
+          "number": 8,
+          "url": "https://github.com/jfusco/context-wiki/pull/8"
         }
       ],
-      "bytes": 2555,
+      "bytes": 2593,
       "degree": 7,
       "x": -0.082579,
       "y": 0.996584,
