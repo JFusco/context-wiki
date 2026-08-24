@@ -25,4 +25,4 @@ Discovery and draft auditing do not invent topic names. The reviewing agent choo
 - Topic existence checks preserve the existing symlink and path-containment defenses.
 - The installer seeds `wiki/plans/INDEX.md` when missing, then leaves its authored rows outside checksum management.
 - The [installer contract](./installer-contract.md) governs managed assets and standalone Claude imports.
-- [Issue #5](https://github.com/JFusco/context-wiki/issues/5) tracks the topic-integrity repair.
+- [Issue #5](https://github.com/JFusco/context-wiki/issues/5 — closed) tracks the topic-integrity repair.
