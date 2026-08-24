@@ -4,34 +4,118 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
-const { repoRoot, walk } = require("./lib/common.cjs");
+const { repoRoot, walk, atomicWrite } = require("./lib/common.cjs");
+const { githubRefs, key } = require("./lib/github-refs.cjs");
 
-function issueRefs(text) {
-  const refs = [...text.matchAll(/https:\/\/github\.com\/([^/]+)\/([^/]+)\/issues\/(\d+)/g)].map((match) => ({ url: match[0], owner: match[1], repo: match[2], number: match[3] }));
-  return [...new Map(refs.map((item) => [item.url, item])).values()];
-}
+const CLOSED_SUFFIX = " — closed <!-- wiki-issue-state:closed -->";
+const OWNED_CLOSED_RE = /\s+—\s+closed\s+<!--\s*wiki-issue-state:closed\s*-->\s*$/;
+const AUTHORED_CLOSED_RE = /\s+—\s+closed\s*$/;
+
+function issueRefs(text) { return githubRefs(text, { includeLabeled: false }).filter((item) => item.kind === "issue"); }
 function setIssueState(text, url, state) {
-  const escaped = url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return text.replace(new RegExp(`(${escaped})(?:\\s+—\\s+closed)?`, "g"), state === "closed" ? "$1 — closed" : "$1");
+  const line = String(text);
+  if (!line.includes(url)) return line;
+  if (state === "open") return line.replace(OWNED_CLOSED_RE, "");
+  if (state === "closed" && !OWNED_CLOSED_RE.test(line) && !AUTHORED_CLOSED_RE.test(line)) return line.replace(/\s*$/, "") + CLOSED_SUFFIX;
+  return line;
 }
 function markClosed(text, url) { return setIssueState(text, url, "closed"); }
+function openThreadLineIndexes(lines) {
+  const indexes = [];
+  let inOpenThreads = false;
+  let fence = "";
+  for (let index = 0; index < lines.length; index++) {
+    const marker = lines[index].match(/^\s*(`{3,}|~{3,})/)?.[1]?.[0] || "";
+    if (marker) {
+      if (!fence) fence = marker;
+      else if (fence === marker) fence = "";
+      continue;
+    }
+    if (fence) continue;
+    if (/^##\s/.test(lines[index])) inOpenThreads = /^##\s+Open threads\b/i.test(lines[index]);
+    if (inOpenThreads) indexes.push(index);
+  }
+  return indexes;
+}
+function ghState(issue) {
+  return execFileSync("gh", ["api", `repos/${issue.repository}/issues/${issue.number}`, "--jq", ".state"], { encoding: "utf8" }).trim().toLowerCase() || null;
+}
+function refresh(topicsDir, lookup = ghState) {
+  const changes = [];
+  const warnings = [];
+  if (!fs.existsSync(topicsDir)) return { changes, warnings };
+  const records = walk(topicsDir, (item) => item.endsWith(".md")).map((file) => ({ file, lines: fs.readFileSync(file, "utf8").split("\n") }));
+  const references = new Map();
+  for (const record of records) {
+    for (const index of openThreadLineIndexes(record.lines)) {
+      const line = record.lines[index];
+      for (const issue of issueRefs(line)) references.set(key(issue), issue);
+    }
+  }
+  const states = new Map();
+  for (const [issueKey, issue] of [...references].sort(([a], [b]) => a.localeCompare(b))) {
+    try {
+      const state = String(lookup(issue) || "").trim().toLowerCase();
+      if (!['open', 'closed'].includes(state)) throw new Error("no valid state");
+      states.set(issueKey, state);
+    } catch (error) {
+      warnings.push(`${issue.repository} issue #${issue.number}: ${error.message || "lookup failed"}`);
+    }
+  }
+  for (const record of records) {
+    let touched = false;
+    for (const index of openThreadLineIndexes(record.lines)) {
+      const line = record.lines[index];
+      const refs = issueRefs(line);
+      if (!refs.length) continue;
+      const known = refs.map((issue) => states.get(key(issue))).filter(Boolean);
+      if (!known.length) continue;
+      const closed = known.length === refs.length && known.every((state) => state === "closed");
+      const reopened = known.some((state) => state === "open");
+      let next = line;
+      if (closed && !OWNED_CLOSED_RE.test(line) && !AUTHORED_CLOSED_RE.test(line)) next = line.replace(/\s*$/, "") + CLOSED_SUFFIX;
+      else if (reopened && OWNED_CLOSED_RE.test(line)) next = line.replace(OWNED_CLOSED_RE, "");
+      if (next !== line) {
+        record.lines[index] = next;
+        touched = true;
+      }
+    }
+    if (touched) {
+      atomicWrite(record.file, record.lines.join("\n"));
+      changes.push(path.basename(record.file));
+    }
+  }
+  return { changes, warnings };
+}
+function parseArgs(argv) {
+  const args = {};
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === "--repo") args.repo = argv[++i];
+    else if (argv[i] === "--wiki") args.wiki = argv[++i];
+    else if (argv[i] === "--state-map") args.stateMap = argv[++i];
+    else throw new Error(`unknown argument: ${argv[i]}`);
+  }
+  return args;
+}
 function main() {
   try {
-    const repoAt = process.argv.indexOf("--repo");
-    const root = repoRoot(repoAt >= 0 ? process.argv[repoAt + 1] : process.cwd());
-    let changed = 0;
-    for (const file of walk(path.join(root, "wiki", "topics"), (item) => item.endsWith(".md"))) {
-      let text = fs.readFileSync(file, "utf8");
-      const original = text;
-      for (const issue of issueRefs(text)) {
-        const state = execFileSync("gh", ["api", `repos/${issue.owner}/${issue.repo}/issues/${issue.number}`, "--jq", ".state"], { encoding: "utf8" }).trim();
-        text = setIssueState(text, issue.url, state);
-      }
-      if (text !== original) { fs.writeFileSync(file, text); changed++; }
+    const args = parseArgs(process.argv.slice(2));
+    const root = repoRoot(args.repo || process.cwd());
+    const wiki = args.wiki ? path.resolve(args.wiki) : path.join(root, "wiki");
+    let lookup = ghState;
+    if (args.stateMap) {
+      const states = JSON.parse(fs.readFileSync(path.resolve(args.stateMap), "utf8"));
+      lookup = (issue) => states[key(issue)] || states[`${issue.repository}#${issue.number}`] || states[issue.url] || states[String(issue.number)] || null;
     }
-    console.log(`PASS issue-state refresh: ${changed} topic(s) changed`);
+    const result = refresh(path.join(wiki, "topics"), lookup);
+    for (const warning of result.warnings) console.warn(`warning: issue-state lookup failed for ${warning}; citation left unchanged`);
+    console.log(`PASS issue-state refresh: ${result.changes.length} topic(s) changed`);
     return 0;
-  } catch (error) { console.error(`FAIL ${error.message}`); return 2; }
+  } catch (error) {
+    console.error(`FAIL ${error.message}`);
+    return 2;
+  }
 }
+
 if (require.main === module) process.exit(main());
-module.exports = { issueRefs, setIssueState, markClosed, main };
+module.exports = { CLOSED_SUFFIX, OWNED_CLOSED_RE, AUTHORED_CLOSED_RE, issueRefs, setIssueState, markClosed, openThreadLineIndexes, ghState, refresh, parseArgs, main };

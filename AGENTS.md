@@ -32,8 +32,8 @@ Keep `CLAUDE.md` as a one-line import of this file: `@AGENTS.md`.
 Run these commands before completing changes:
 
 ```sh
-node scripts/validate-install.cjs
-node scripts/test.cjs
+pnpm run verify:push
+pnpm run verify:ci
 git diff --check
 ```
 
@@ -42,9 +42,12 @@ Review `git status --short` and keep unrelated user changes intact.
 <!-- wiki-skill:start -->
 ## Context wiki
 
-Use `wiki/` as this repository's durable record of executed plans, decisions, and substantive change history.
+Use `wiki/` as this repository's durable record of executed plans, decisions, and substantive change history. Never bulk-load `wiki/` or `scripts/wiki/graph/data/graph.json`.
 
-- Start history and rationale questions at `wiki/INDEX.md`; load only the pages it routes to.
+- For a direct single-topic history or rationale question, start at `wiki/INDEX.md` and open only the page it routes to.
+- Only for a cross-page question, use `node scripts/wiki/navigate.cjs --intent why --query "<terms>"`. Use `wiring` for ownership/dependency questions and `impact` before cross-topic changes.
+- Read only the returned byte-counted itinerary, in order, and stop as soon as the answer is grounded.
+- If navigation returns candidates or no route, rerun with exact `--from`/`--to` node IDs. If ambiguity remains, ask one focused question or use one targeted `rg`; never guess a route.
 - After executing a Claude, Codex, or Cursor plan, archive it and add the journal/topic updates in the same delivery per `wiki/MECHANICS.md`.
 - Run `node scripts/wiki/discover-plans.cjs` to recover missed plans, `node scripts/wiki/build-graph.cjs` after wiki edits, and `node scripts/wiki/check.cjs` before completion.
 - The Sigma.js graph indexes only Markdown under `wiki/`; never add code nodes.

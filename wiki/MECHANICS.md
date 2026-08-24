@@ -21,9 +21,10 @@ Ordinary relative Markdown links between wiki pages are graph relationships too.
 
 ## Recovery and checks
 
+- `node scripts/wiki/navigate.cjs --intent why|wiring|impact --query "<terms>"` returns the deterministic, byte-counted Markdown itinerary. Use exact `--from`/`--to` IDs after an ambiguous result; never bulk-load the wiki.
 - `node scripts/wiki/discover-plans.cjs` scans repository history plus Claude, Cursor, active Codex, and archived Codex plan stores.
 - `node scripts/wiki/build-graph.cjs` deterministically regenerates the wiki-only graph and connection summary.
 - `node scripts/wiki/check.cjs` rejects stale output, dangling relationships, non-wiki nodes, or executed archives without evidence and a topic.
 - The installer-owned pre-commit block is fail-open: it warns, rebuilds, and stages generated graph artifacts without blocking uncertain execution classification or lifecycle failures. It preserves a preceding command's nonzero status so advisory wiki work cannot mask a blocking lint or test gate.
 
-GitHub reconciliation uses the canonical `Sync context wiki` and `Sync wiki issue state` Actions, reviewable `bot/wiki-*` branches, and a `PR_BOT_TOKEN` secret with contents and pull-request write access. Both write workflows set `GRAPHIFY_SKIP_HOOK=1` at workflow scope because bot-owned checkouts and commits run without Graphify installed; developer Git events retain the native Graphify lifecycle.
+GitHub reconciliation uses the canonical `Sync context wiki` and `Sync wiki issue state` Actions, reviewable `bot/wiki-*` branches, Node 24.14.0, and a `PR_BOT_TOKEN` secret with contents and pull-request write access. Merge sync is event-driven with manual merged-PR replay. Issue state runs daily at `30 11 * * *` because cited issues can close or reopen without a repository event. Both paginate API evidence, use force-with-lease, reopen unmerged bot PRs, and set `GRAPHIFY_SKIP_HOOK=1`; developer Git events retain native Graphify behavior.

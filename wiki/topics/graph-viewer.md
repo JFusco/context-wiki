@@ -5,9 +5,11 @@ slug: graph-viewer
 
 ## Presentation contract
 
-The installed wiki viewer uses the same Sigma.js presentation pattern as the Build Orchestration reference: a dark left control rail, dynamic type legend, search, reset, neighborhood focus, and a right-side node detail panel. Graphology seeds nodes in a circle and runs 300 ForceAtlas2 iterations in the browser before Sigma renders them. The circular coordinates stored in deterministic `graph.json` output are not the final presentation layout.
+The installed wiki viewer uses the same Sigma.js presentation pattern as the Build Orchestration reference: a dark left control rail, dynamic type legend, search, reset, neighborhood focus, a right-side node detail panel, and Source/Target shortest-route controls. Graphology seeds nodes in a circle and runs 300 ForceAtlas2 iterations in the browser before Sigma renders them. The circular coordinates stored in deterministic `graph.json` output are not the final presentation layout.
 
 The viewer continues to enforce the [wiki system](./wiki-system.md) boundary: every graph node ID must start with `wiki/`. The reference presentation does not broaden the graph into source code or tooling.
+
+The browser and `scripts/wiki/navigate.cjs` share explicit edge, hub, and byte costs. Search and node details include repository-qualified PR/issue evidence. Route output shows Source→Target authority, each relationship, per-page bytes, and total estimated load so an agent can stop after the smallest grounded itinerary.
 
 ## Multi-repository serving
 

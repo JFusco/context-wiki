@@ -71,7 +71,8 @@ body {
   justify-content: space-between;
 }
 
-input[type="search"] {
+input[type="search"],
+select {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid var(--border);
@@ -81,9 +82,22 @@ input[type="search"] {
   font-size: 13px;
 }
 
-input[type="search"]:focus {
+input[type="search"]:focus,
+select:focus {
   border-color: var(--accent);
   outline: none;
+}
+
+.route-controls select {
+  margin-bottom: 7px;
+}
+
+.route-controls > button {
+  width: 100%;
+}
+
+#route-status {
+  margin: 7px 0 0;
 }
 
 button {
@@ -234,6 +248,29 @@ button:hover {
   padding: 0;
   list-style: none;
   font-size: 13px;
+}
+
+#p-route {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 12px;
+}
+
+#p-route li {
+  padding: 5px 2px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  word-break: break-word;
+}
+
+#p-route li:hover,
+#p-route li:focus-visible {
+  color: var(--accent);
+  outline: none;
+}
+
+#p-meta a {
+  color: var(--accent);
 }
 
 #p-neighbors li {

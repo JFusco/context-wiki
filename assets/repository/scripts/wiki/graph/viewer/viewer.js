@@ -35,6 +35,10 @@
     focus: null,
     focusSet: null,
     query: "",
+    policy: null,
+    route: null,
+    routeNodes: null,
+    routeEdges: null,
   };
 
   const $ = (selector) => document.querySelector(selector);
@@ -46,10 +50,14 @@
       state.graph = await response.json();
       if (!Array.isArray(state.graph.nodes) || !Array.isArray(state.graph.edges)) throw new Error("graph data is invalid");
       if (state.graph.nodes.some((node) => !node.id.startsWith("wiki/"))) throw new Error("graph contains non-wiki nodes");
+      const policyResponse = await fetch("../routing-policy.json", { cache: "no-store" });
+      if (!policyResponse.ok) throw new Error(`routing policy load failed: ${policyResponse.status}`);
+      state.policy = await policyResponse.json();
       buildIndexes();
       buildModel();
       buildRenderer();
       buildLegend();
+      populateRouteSelects();
       wireControls();
       applyView();
       $("#stats").textContent = `${state.graph.nodes.length} nodes · ${state.graph.edges.length} edges`;
@@ -86,6 +94,19 @@
     return 3 + Math.sqrt(degree) * 1.7;
   }
 
+  function githubRefText(node) {
+    return (node.githubRefs || []).flatMap((item) => [
+      item.url,
+      item.repository,
+      `${item.repository}#${item.number}`,
+      `${item.repository} ${item.kind === "pull-request" ? "PR pull request" : "issue"} #${item.number}`,
+    ]).join(" ");
+  }
+
+  function nodeSearchKey(node) {
+    return `${node.label} ${node.id} ${(node.aliases || []).join(" ")} ${githubRefText(node)}`.toLowerCase();
+  }
+
   function buildModel() {
     const graph = new graphology.MultiGraph();
     for (const node of state.graph.nodes) {
@@ -94,6 +115,7 @@
         size: nodeSize(0),
         color: TYPE_COLORS[node.type] || "#888",
         nodeType: node.type,
+        searchKey: nodeSearchKey(node),
         x: 0,
         y: 0,
       });
@@ -104,6 +126,7 @@
         edgeType: edge.relation,
         size: edge.relation === "link" ? 0.6 : 0.8,
         color: EDGE_COLORS[edge.relation] || DIM_EDGE,
+        routeKey: window.WikiRouting.edgeKey(edge),
       });
     }
     graph.forEachNode((node) => graph.setNodeAttribute(node, "size", nodeSize(graph.degree(node))));
@@ -134,14 +157,18 @@
   }
 
   function nodeReducer(node, data) {
+    if (state.routeNodes?.has(node)) return { ...data, size: data.size + 2, zIndex: 2 };
     if (!state.visible.has(node)) return { ...data, hidden: true };
+    if (state.routeNodes && !state.routeNodes.has(node)) return { ...data, color: DIM_NODE, label: "", zIndex: 0 };
     const active = (!state.matched || state.matched.has(node)) && (!state.focusSet || state.focusSet.has(node));
     return active ? { ...data, zIndex: 1 } : { ...data, color: DIM_NODE, label: "", zIndex: 0 };
   }
 
   function edgeReducer(edge, data) {
     const [source, target] = state.model.extremities(edge);
+    if (state.routeEdges?.has(data.routeKey)) return { ...data, size: 2.5, color: "rgba(255,196,80,0.95)", zIndex: 2 };
     if (!state.visible.has(source) || !state.visible.has(target)) return { ...data, hidden: true };
+    if (state.routeEdges) return { ...data, hidden: true };
     const inFocus = !state.focusSet || state.focusSet.has(source) || state.focusSet.has(target);
     const inSearch = !state.matched || state.matched.has(source) || state.matched.has(target);
     return inFocus && inSearch ? data : { ...data, color: DIM_EDGE, zIndex: 0 };
@@ -154,7 +181,7 @@
     if (state.query) {
       state.matched = new Set();
       for (const node of state.graph.nodes) {
-        if (`${node.label} ${node.id}`.toLowerCase().includes(state.query)) state.matched.add(node.id);
+        if (nodeSearchKey(node).includes(state.query)) state.matched.add(node.id);
       }
     } else {
       state.matched = null;
@@ -207,12 +234,74 @@
     applyView();
   }
 
+  function populateRouteSelects() {
+    const nodes = [...state.graph.nodes].sort((a, b) => a.label.localeCompare(b.label) || a.id.localeCompare(b.id));
+    for (const selector of ["#route-from", "#route-to"]) {
+      const select = $(selector);
+      const prompt = document.createElement("option");
+      prompt.value = "";
+      prompt.textContent = selector === "#route-from" ? "Source…" : "Target…";
+      select.replaceChildren(prompt);
+      for (const node of nodes) {
+        const option = document.createElement("option");
+        option.value = node.id;
+        option.textContent = `${node.label} — ${node.id}`;
+        select.appendChild(option);
+      }
+    }
+  }
+
+  function formatBytes(bytes) { return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KiB`; }
+
+  function showRoute() {
+    const source = $("#route-from").value;
+    const target = $("#route-to").value;
+    if (!source || !target) { $("#route-status").textContent = "Choose a source and target."; return; }
+    const route = window.WikiRouting.shortestPath(state.graph, source, target, state.policy);
+    if (!route) { clearRoute("No permitted route found."); return; }
+    state.route = route;
+    state.routeNodes = new Set(route.nodes);
+    state.routeEdges = new Set(route.steps.map((step) => window.WikiRouting.edgeKey(step.edge)));
+    $("#route-status").textContent = `Authority: ${route.routeAuthority} · ${route.nodes.length} file(s) · Total bytes: ${formatBytes(route.totalBytes)} · cost ${route.cost}`;
+    renderRoutePanel();
+    applyView();
+  }
+
+  function renderRoutePanel() {
+    $("#p-label").textContent = "Shortest route";
+    $("#node-panel").classList.add("hidden");
+    const list = $("#p-route");
+    list.replaceChildren();
+    state.route.itinerary.forEach((routeItem) => {
+      const id = routeItem.id;
+      const node = state.raw.get(id);
+      const item = document.createElement("li");
+      item.tabIndex = 0;
+      item.textContent = `${node.label} — ${routeItem.relation} — ${routeItem.authority} · ${formatBytes(routeItem.bytes)}`;
+      item.addEventListener("click", () => selectNode(id));
+      item.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") selectNode(id); });
+      list.appendChild(item);
+    });
+    $("#route-panel").classList.remove("hidden");
+    $("#panel").classList.remove("hidden");
+  }
+
+  function clearRoute(message = "") {
+    state.route = null;
+    state.routeNodes = null;
+    state.routeEdges = null;
+    $("#route-status").textContent = message;
+    $("#route-panel").classList.add("hidden");
+    applyView();
+  }
+
   function wireControls() {
     $("#search").addEventListener("input", (event) => {
       state.query = event.target.value.trim().toLowerCase();
       applyView();
     });
     $("#reset").addEventListener("click", resetView);
+    $("#show-route").addEventListener("click", showRoute);
     $("#toggle-all").addEventListener("click", () => {
       const items = [...document.querySelectorAll(".legend-item")];
       const hide = items.some((item) => !state.hiddenTypes.has(item.dataset.type));
@@ -237,6 +326,12 @@
       item.setAttribute("aria-pressed", "true");
     }
     state.focus = null;
+    state.route = null;
+    state.routeNodes = null;
+    state.routeEdges = null;
+    $("#route-from").value = "";
+    $("#route-to").value = "";
+    $("#route-status").textContent = "";
     $("#panel").classList.add("hidden");
     applyView();
     state.renderer.getCamera().animatedReset();
@@ -273,6 +368,8 @@
   function renderPanel(id) {
     const node = state.raw.get(id);
     $("#p-label").textContent = node.label;
+    $("#route-panel").classList.add("hidden");
+    $("#node-panel").classList.remove("hidden");
     const typeBadge = $("#p-type");
     typeBadge.textContent = TYPE_LABELS[node.type] || node.type;
     typeBadge.style.background = TYPE_COLORS[node.type] || "#888";
@@ -282,6 +379,8 @@
     $("#p-meta").replaceChildren();
     addMetaRow("Path", node.id, true);
     addMetaRow("Connections", String(state.adjacency.get(id).size));
+    addMetaRow("Size", formatBytes(node.bytes || 0));
+    for (const ref of node.githubRefs || []) addMetaLink(ref.kind === "pull-request" ? "Pull request" : "Issue", `${ref.repository}#${ref.number}`, ref.url);
 
     const neighbors = [...state.adjacency.get(id)]
       .map((neighborId) => state.raw.get(neighborId))
@@ -312,6 +411,19 @@
     $("#panel").classList.remove("hidden");
   }
 
-  window.WikiGraph = { select: selectNode, reset: resetView, state };
+  function addMetaLink(label, value, href) {
+    const term = document.createElement("dt");
+    term.textContent = label;
+    const detail = document.createElement("dd");
+    const link = document.createElement("a");
+    link.href = href;
+    link.target = "_blank";
+    link.rel = "noreferrer";
+    link.textContent = value;
+    detail.appendChild(link);
+    $("#p-meta").append(term, detail);
+  }
+
+  window.WikiGraph = { select: selectNode, reset: resetView, state, nodeSearchKey };
   init();
 })();

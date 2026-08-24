@@ -12,6 +12,8 @@ The skill works with Codex, Claude Code, and Cursor. It keeps source code author
 - Evidence-based auditing and topic-linked archiving of executed plans.
 - Topic, journal, and plan-ledger conventions for durable project history.
 - A deterministic Sigma.js graph containing only Markdown pages under `wiki/`.
+- A shared weighted router for agents and browser Source/Target selection, with explicit route authority, relationships, and per-file/total byte estimates.
+- Repository-qualified pull-request and issue evidence on every graph node; search resolves those citations as well as page names and aliases.
 - Wiki validation, pre-commit integration, and optional GitHub Actions.
 - Conflict protection for authored pages and locally modified managed files.
 
@@ -33,22 +35,23 @@ pnpm install
 pnpm test
 pnpm graph:build
 pnpm graph:view
+node scripts/wiki/navigate.cjs --intent why --query "repository automation"
 ```
 
 The local viewer starts at <http://127.0.0.1:4173/> and advances to the next available port when needed. Target repositories do not receive this `package.json`; their installed viewer remains self-contained.
 
 ## Repository automation
 
-The canonical checkout uses `@verndale/ai-commit` for Conventional Commit generation and validation and `@verndale/ai-pr` for deterministic pull-request creation:
+The canonical checkout uses exact `@verndale/ai-commit@2.7.0` as its sole commit-policy provider and retains exact `@verndale/ai-pr@1.3.5` for its existing generic PR workflow:
 
 ```sh
 pnpm exec ai-commit init
 pnpm exec ai-pr init
 ```
 
-Initialization adds `pnpm commit`, `pnpm pr:create`, Husky commit-message hooks, `.env.example`, and `.github/workflows/pr.yml`. Local `.env` and `.env.local` files are ignored. Set `OPENAI_API_KEY` for AI commit generation and `GH_TOKEN` or `GITHUB_TOKEN` for local PR creation.
+`commitlint.config.cjs` is the commit-policy provider's one-line export. Because pnpm's strict layout does not expose a transitive binary by default, `pnpm-workspace.yaml` narrowly public-hoists `@commitlint/cli`; `pnpm exec commitlint` then resolves without adding a second direct dependency. The `Quality` and `Commit message lint` workflows run on Node 24.14.0. `Create or update PR` ignores `bot/wiki-**` branches so wiki writers cannot start a second automation loop. Local `.env` files stay ignored; set provider credentials only for the local AI-assisted commands that use them.
 
-Husky 9 dispatches Git hooks through `.husky/_`; the wiki installer attaches its advisory pre-commit block to `.husky/pre-commit`, where the runner can execute it. The PR workflow requires the `PR_BOT_TOKEN` repository secret.
+Husky 9 dispatches Git hooks through `.husky/_`; the wiki installer attaches its advisory pre-commit block to `.husky/pre-commit`, where the runner can execute it. The wiki writer workflows require the `PR_BOT_TOKEN` repository secret.
 
 ## Install globally
 
@@ -97,6 +100,7 @@ Run the skill from the repository you want to document. `$wiki` is accepted as a
 | `/wiki backfill` | Discover and audit historical plans, then rebuild and validate. |
 | `/wiki graph` | Rebuild the wiki-only graph. |
 | `/wiki graph view` | Rebuild the graph and start the local viewer. |
+| `/wiki headless <wiki-root>` | Add deterministic navigation to an existing custom wiki without replacing its mechanics. |
 
 Additional text can provide repository context or an explicit project path.
 
@@ -114,6 +118,8 @@ Useful options:
 --dry-run     Report managed-file drift without writing.
 --github      Install GitHub workflows even when auto-detection is not sufficient.
 --no-github   Skip GitHub workflows.
+--headless-navigation --wiki-root <dir>
+              Install only navigation scripts and managed agent traversal.
 ```
 
 The installer resolves the Git root, preserves existing work, and adds or reconciles:
@@ -130,6 +136,20 @@ wiki/
 If `CLAUDE.md` already contains only `@AGENTS.md`, the installer treats it as compliant and leaves its bytes unchanged. Otherwise it creates or updates a managed import block so repository-specific Claude instructions can remain outside that block.
 
 It does not create a separate `.cursor/rules/wiki.mdc` file. Cursor receives the wiki contract through the managed `AGENTS.md` block.
+
+Headless mode requires the custom wiki root to exist. It installs no viewer, committed graph data, plan ledger, hook, or workflow and explicitly leaves the repository's authoring and validation conventions in place.
+
+## Token-efficient navigation
+
+The managed `AGENTS.md` block directs models to choose an intent before reading:
+
+```sh
+node scripts/wiki/navigate.cjs --intent why --query "<terms>"
+node scripts/wiki/navigate.cjs --intent wiring --from <node-id> --to <node-id>
+node scripts/wiki/navigate.cjs --intent impact --query "<terms>" --max-bytes 12000
+```
+
+Routes use deterministic edge costs, a hub penalty, a small byte penalty, and stable tie-breaking. Output lists the exact Markdown itinerary, each file's byte count, and total estimated load. Agents open those pages in order and stop when grounded; ambiguous matches return candidates instead of guessing. For custom roots, add `--wiki-root <dir>`.
 
 ## Repository workflow
 
@@ -151,7 +171,7 @@ node scripts/wiki/serve-graph.cjs
 
 Implemented and partial archives without a topic are rejected by both the archive/audit path and `wiki check`. Historical rows that were not executed may remain topicless.
 
-The viewer starts at <http://127.0.0.1:4173/> by default. If that port is occupied, it automatically selects the next available port and prints the actual URL, so graphs from multiple repositories can run together. Set `GRAPH_PORT` to require a specific port instead. Its Sigma.js presentation uses the same dark control shell, ForceAtlas2 network layout, search, type toggles, neighborhood focus, and detail panel pattern as the Build Orchestration graph. The deterministic circular coordinates in `graph.json` are only a safe seed; the browser settles them into the readable network layout.
+The viewer starts at <http://127.0.0.1:4173/> by default. If that port is occupied, it automatically selects the next available port and prints the actual URL, so graphs from multiple repositories can run together. Set `GRAPH_PORT` to require a specific port instead. Its Sigma.js presentation uses the same dark control shell, ForceAtlas2 network layout, search, type toggles, neighborhood focus, detail panel, and weighted Source/Target route as Build Orchestration. Search includes repository-qualified GitHub evidence. Node details expose those PR/issue citations, and routes show explicit authority, relationship, per-page bytes, and total bytes.
 
 ## GitHub automation
 
@@ -163,6 +183,8 @@ When the target is a Git repository with a GitHub `origin`, the installer adds t
 
 The two write workflows require a `PR_BOT_TOKEN` repository secret with contents and pull-request write access. They propose reviewable `bot/wiki-*` branches rather than writing directly to the default branch.
 
+`Sync context wiki` is merge-event driven and supports manual replay of a merged PR number; it does not need a cron. It records every same- or cross-repository issue cited with a GitHub closing keyword, merges that evidence into an existing journal when present, and ignores arbitrary or fenced citations. `Sync wiki issue state` runs at `30 11 * * *` because cited issues can close or reopen without any repository event. Both paginate GitHub API results, suppress unavailable Graphify bot hooks, use authenticated force-with-lease, and reopen an unmerged bot PR when appropriate. The installed `Wiki integrity` workflow expects the consuming package to expose `wiki:check` as `node scripts/wiki/check.cjs`.
+
 ## Validate this skill
 
 From this repository:
@@ -170,6 +192,8 @@ From this repository:
 ```sh
 node scripts/validate-install.cjs
 node scripts/test.cjs
+pnpm run verify:push
+pnpm run verify:ci
 ```
 
 ## Repository layout

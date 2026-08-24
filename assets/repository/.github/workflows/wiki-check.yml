@@ -2,29 +2,34 @@ name: Wiki integrity
 
 on:
   pull_request:
+    branches: [main]
   push:
-    branches-ignore: ["bot/wiki-**"]
+    branches: [main]
+  workflow_dispatch: {}
 
 permissions:
   contents: read
+
+concurrency:
+  group: wiki-integrity-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24.14.0"
+      - name: Enable declared pnpm via Corepack
+        run: corepack enable && corepack install
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Validate wiki
-        run: node scripts/wiki/check.cjs
-      - name: Warn when substantive PRs omit a journal
-        if: github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          files="$(gh pr view "$PR_NUMBER" --json files --jq '.files[].path')"
-          if { printf '%s\n' "$files" | grep -Eq '^(AGENTS|CLAUDE)\.md$' || printf '%s\n' "$files" | grep -Eqv '^(wiki/|scripts/wiki/|\.github/workflows/wiki-|.*\.md$)'; } && ! printf '%s\n' "$files" | grep -q '^wiki/journal/'; then
-            echo '::warning::Substantive changes have no wiki journal entry.'
-          fi
+        run: pnpm run wiki:check

@@ -38,7 +38,7 @@ function main() {
     fs.chmodSync(output, 0o600);
     console.log(`PASS wrote ${manifest.summary.total} candidates to ${output}`);
   } else {
-    console.log(JSON.stringify({ repository: manifest.repository.root, summary: manifest.summary, candidates: manifest.candidates.map(({ body, ...item }) => item) }, null, 2));
+    console.log(JSON.stringify({ repository: manifest.repository.root, summary: manifest.summary, candidates: manifest.candidates.map(({ body: _body, ...item }) => item) }, null, 2));
   }
   if (manifest.summary.ambiguous) console.warn(`warning: ${manifest.summary.ambiguous} candidates require repository-association review`);
   return 0;

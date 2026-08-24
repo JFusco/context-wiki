@@ -3,7 +3,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const { digest, repoRoot, slugify, today, slash, ensureInside, hasSymlinkComponent, atomicWrite, walk } = require("./lib/common.cjs");
+const { digest, repoRoot, slugify, slash, ensureInside, hasSymlinkComponent, atomicWrite, walk } = require("./lib/common.cjs");
 const { inferPlanDate } = require("./lib/dates.cjs");
 const { titleFromBody, render } = require("./lib/frontmatter.cjs");
 const { cleanCursor } = require("./lib/plans.cjs");
@@ -65,7 +65,7 @@ function stringList(name, value, allowEmpty = false) {
 }
 
 function cell(value) { return String(value).replace(/\r?\n/g, " ").replace(/\|/g, "\\|").trim(); }
-function label(value) { return String(value).replace(/\r?\n/g, " ").replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/([\[\]])/g, "\\$1").trim(); }
+function label(value) { return String(value).replace(/\r?\n/g, " ").replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replaceAll("[", "\\[").replaceAll("]", "\\]").trim(); }
 
 function validateArchiveInput(root, item, audit) {
   if (!STATUSES.has(audit.status)) throw new Error(`invalid status: ${audit.status}`);

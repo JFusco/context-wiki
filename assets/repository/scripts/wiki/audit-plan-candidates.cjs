@@ -223,7 +223,7 @@ function fmtCommit(hit) {
 }
 
 function classify(root, candidate, context) {
-  const { title, reasons, body, sources } = candidate;
+  const { title, reasons, body } = candidate;
   const { baseBranch, mergedPrs } = context;
   const titleWords = words(title);
   const tracked = candidate._tracked || [];
