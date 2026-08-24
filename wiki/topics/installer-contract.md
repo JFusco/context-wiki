@@ -32,7 +32,7 @@ The persistent checkout may live outside `~/.agents/skills/wiki` and be exposed 
 
 ## Evidence
 
-- [Issue #3](https://github.com/JFusco/context-wiki/issues/3) tracks the compatibility and self-hosting delivery.
+- [Issue #3](https://github.com/JFusco/context-wiki/issues/3 — closed) tracks the compatibility and self-hosting delivery.
 - The installer integration suite proves a standalone import remains byte-identical across installation and a clean dry run.
 - The unit suite proves files with other authored content still receive the managed import block.
 - Global validation proves the agent and Claude discovery symlinks resolve to the same persistent checkout.
