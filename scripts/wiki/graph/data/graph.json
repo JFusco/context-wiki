@@ -116,8 +116,15 @@
       "label": "Make agent wiki navigation deterministic and route-first",
       "type": "journal",
       "aliases": [],
-      "githubRefs": [],
-      "bytes": 1415,
+      "githubRefs": [
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "pull-request",
+          "number": 11,
+          "url": "https://github.com/jfusco/context-wiki/pull/11"
+        }
+      ],
+      "bytes": 1454,
       "degree": 5,
       "x": -0.5,
       "y": 0.866025,
