@@ -6,6 +6,8 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const { repoRoot, walk, slash, digest, hasSymlinkComponent } = require("./lib/common.cjs");
 const { splitFrontmatter, scalar, list } = require("./lib/frontmatter.cjs");
+const { key: githubRefKey } = require("./lib/github-refs.cjs");
+const { loadPolicy, policyProblems } = require("./routing.cjs");
 
 function main() {
   const repoAt = process.argv.indexOf("--repo");
@@ -18,8 +20,13 @@ function main() {
   const duplicateLedger = ledgerDigests.filter((value, index) => ledgerDigests.indexOf(value) !== index);
   if (duplicateLedger.length) errors.push(`duplicate plan ledger digests: ${[...new Set(duplicateLedger)].join(", ")}`);
   const archiveDigests = new Set();
-  for (const required of ["wiki/INDEX.md", "wiki/MECHANICS.md", "wiki/plans/INDEX.md", "scripts/wiki/graph/data/graph.json"]) {
+  for (const required of ["wiki/INDEX.md", "wiki/MECHANICS.md", "wiki/plans/INDEX.md", "scripts/wiki/graph/data/graph.json", "scripts/wiki/navigate.cjs", "scripts/wiki/routing.cjs", "scripts/wiki/routing-policy.json", "scripts/wiki/graph/viewer/routing.js"]) {
     if (!fs.existsSync(path.join(root, required))) errors.push(`missing ${required}`);
+  }
+  const syncWorkflow = path.join(root, ".github", "workflows", "wiki-sync.yml");
+  if (fs.existsSync(syncWorkflow)) {
+    const source = fs.readFileSync(syncWorkflow, "utf8");
+    if (!source.includes('--arg repository "$GITHUB_REPOSITORY"') || !source.includes("{schemaVersion: 1, repository: $repository") || !source.includes("mergedAt: $pr.merged_at, changedPaths: $files")) errors.push("Sync context wiki does not emit the canonical versioned merge context");
   }
   for (const file of walk(path.join(root, "wiki", "plans"), (item) => item.endsWith(".md") && path.basename(item) !== "INDEX.md")) {
     if (hasSymlinkComponent(root, file)) { errors.push(`${slash(path.relative(root, file))}: symbolic links are not allowed`); continue; }
@@ -47,7 +54,19 @@ function main() {
   if (fs.existsSync(path.join(root, "scripts/wiki/graph/data/graph.json"))) {
     try {
       const graph = JSON.parse(fs.readFileSync(path.join(root, "scripts/wiki/graph/data/graph.json"), "utf8"));
+      if (graph.version !== 1 || graph.wikiRoot !== "wiki") errors.push("graph schema/root metadata is not current");
       if (graph.nodes.some((node) => !node.id.startsWith("wiki/"))) errors.push("graph contains a node outside wiki/");
+      for (const node of graph.nodes) {
+        if (!Number.isInteger(node.bytes) || node.bytes < 0) errors.push(`${node.id}: byte metadata is invalid`);
+        if (!Number.isInteger(node.degree) || node.degree < 0) errors.push(`${node.id}: degree metadata is invalid`);
+        if (!Array.isArray(node.githubRefs)) errors.push(`${node.id}: githubRefs metadata is missing`);
+        else {
+          const keys = node.githubRefs.map(githubRefKey);
+          if (new Set(keys).size !== keys.length) errors.push(`${node.id}: duplicate GitHub evidence metadata`);
+          for (const ref of node.githubRefs) if (!/^[a-z0-9_.-]+\/[a-z0-9_.-]+$/.test(ref.repository) || !["pull-request", "issue"].includes(ref.kind) || !Number.isSafeInteger(ref.number) || ref.number < 1 || ref.url !== `https://github.com/${ref.repository}/${ref.kind === "pull-request" ? "pull" : "issues"}/${ref.number}`) errors.push(`${node.id}: invalid repo-qualified GitHub evidence`);
+        }
+      }
+      for (const problem of policyProblems(loadPolicy(), graph)) errors.push(`routing policy: ${problem}`);
     } catch (error) { errors.push(`invalid graph JSON: ${error.message}`); }
   }
   const graph = spawnSync(process.execPath, [path.join(root, "scripts/wiki/build-graph.cjs"), "--check", "--repo", root], { cwd: root, encoding: "utf8" });

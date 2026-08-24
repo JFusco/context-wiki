@@ -21,7 +21,7 @@ function init(root, args = []) { return node(INIT, ["--repo", root, ...args], { 
 function git(root, args) { const result = run("git", args, { cwd: root }); assert.equal(result.status, 0, result.stderr); return result.stdout.trim(); }
 function makeGit(name, remote = "") {
   const root = temp(name);
-  git(root, ["init", "-q"]);
+  git(root, ["init", "-q", "-b", "main"]);
   git(root, ["config", "user.name", "Wiki Test"]);
   git(root, ["config", "user.email", "wiki@example.test"]);
   if (remote) git(root, ["remote", "add", "origin", remote]);
@@ -40,12 +40,37 @@ test("package manifest exposes the Sigma graph workflow", () => {
   assert.equal(manifest.engines.node, ">=24.14.0");
   assert.equal(manifest.scripts["graph:build"], "node scripts/wiki/build-graph.cjs");
   assert.equal(manifest.scripts["graph:view"], "node scripts/wiki/serve-graph.cjs");
+  assert.equal(manifest.scripts["verify:push"], "pnpm run validate");
+  assert.equal(manifest.scripts["verify:ci"], "pnpm run test:unit && pnpm run validate");
   assert.equal(manifest.scripts.commit, "ai-commit run");
   assert.equal(manifest.scripts["pr:create"], "ai-pr");
   assert.equal(manifest.scripts.prepare, "husky");
-  for (const relative of [".env.example", ".github/workflows/pr.yml", ".husky/commit-msg", ".husky/prepare-commit-msg"]) {
+  assert.equal(fs.readFileSync(path.join(SKILL, "commitlint.config.cjs"), "utf8"), 'module.exports = require("@verndale/ai-commit");\n');
+  assert.match(fs.readFileSync(path.join(SKILL, "pnpm-workspace.yaml"), "utf8"), /publicHoistPattern:\n  - "@commitlint\/cli"/);
+  for (const relative of [".env.example", ".github/workflows/quality.yml", ".github/workflows/commitlint.yml", ".husky/commit-msg", ".husky/prepare-commit-msg"]) {
     assert.ok(fs.existsSync(path.join(SKILL, relative)), relative);
   }
+  const prWorkflow = fs.readFileSync(path.join(SKILL, ".github/workflows/pr.yml"), "utf8");
+  assert.match(prWorkflow, /- bot\/wiki-\*\*/);
+  assert.match(prWorkflow, /if: \$\{\{ !startsWith\(github\.ref_name, 'bot\/wiki-'\) \}\}/);
+  const quality = fs.readFileSync(path.join(SKILL, ".github/workflows/quality.yml"), "utf8");
+  assert.match(quality, /fetch-depth: 0/);
+  assert.match(quality, /run: pnpm run verify:ci/);
+  assert.doesNotMatch(quality, /run: pnpm (?:run )?validate/);
+});
+
+test("a clean pnpm fixture exposes commitlint through ai-commit without a direct CLI dependency", () => {
+  const root = temp("commitlint-hoist");
+  for (const relative of ["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "commitlint.config.cjs"]) fs.copyFileSync(path.join(SKILL, relative), path.join(root, relative));
+  const install = run("pnpm", ["install", "--prefer-offline", "--frozen-lockfile", "--ignore-scripts"], { cwd: root });
+  assert.equal(install.status, 0, install.stderr);
+  const version = run("pnpm", ["exec", "commitlint", "--version"], { cwd: root });
+  assert.equal(version.status, 0, version.stderr);
+  assert.match(version.stdout, /@commitlint\/cli@20\.5\.3/);
+  const valid = run("pnpm", ["exec", "commitlint"], { cwd: root, input: "fix(wiki): Preserve route evidence\n" });
+  const invalid = run("pnpm", ["exec", "commitlint"], { cwd: root, input: "bad title\n" });
+  assert.equal(valid.status, 0, valid.stderr);
+  assert.notEqual(invalid.status, 0);
 });
 
 test("global validation accepts a persistent checkout reached through discovery symlinks", () => {
@@ -70,6 +95,11 @@ test("non-Git initialization is complete, valid, and idempotent", () => {
   for (const [name, needle] of [["AGENTS.md", "## Context wiki"], ["CLAUDE.md", "@AGENTS.md"]]) {
     assert.match(fs.readFileSync(path.join(root, name), "utf8"), new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+  const agents = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8");
+  assert.match(agents, /direct single-topic history or rationale/);
+  assert.match(agents, /Only for a cross-page question/);
+  assert.match(agents, /Never bulk-load `wiki\/` or `scripts\/wiki\/graph\/data\/graph\.json`/);
+  assert.match(agents, /ask one focused question/);
   assert.ok(!fs.existsSync(path.join(root, ".github")));
   const before = fs.readFileSync(path.join(root, "wiki/.wiki-kit.json"), "utf8");
   const ledger = path.join(root, "wiki/plans/INDEX.md");
@@ -92,6 +122,41 @@ test("standalone CLAUDE import remains byte-identical and installer-clean", () =
   const dryRun = init(root, ["--dry-run"]);
   assert.equal(dryRun.status, 0, dryRun.stderr);
   assert.equal(fs.readFileSync(claude, "utf8"), "@AGENTS.md\n");
+});
+
+test("headless custom-root install adds navigation without replacing repository mechanics", () => {
+  const root = makeGit("headless", "https://github.com/example/custom-wiki.git");
+  const existingHook = path.join(root, ".githooks", "pre-commit");
+  const existingWorkflow = path.join(root, ".github", "workflows", "owned.yml");
+  const existingMechanics = path.join(root, "docs", "context", "MECHANICS.md");
+  write(path.join(root, "docs/context/INDEX.md"), "# Existing context\n\n[Decision](./decision.md)\n");
+  write(path.join(root, "docs/context/decision.md"), "# Decision\n\nExisting rationale.\n");
+  write(existingMechanics, "# Owned mechanics\n");
+  write(existingHook, "#!/usr/bin/env sh\necho owned\n");
+  write(existingWorkflow, "name: Owned\n");
+  git(root, ["config", "--local", "core.hooksPath", ".githooks"]);
+  const result = init(root, ["--headless-navigation", "--wiki-root", "docs/context", "--github"]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stderr, /preserved existing hooks, workflows, wiki mechanics, viewer, graph output, and plan ledger/);
+  assert.equal(fs.readFileSync(existingHook, "utf8"), "#!/usr/bin/env sh\necho owned\n");
+  assert.equal(fs.readFileSync(existingWorkflow, "utf8"), "name: Owned\n");
+  assert.equal(fs.readFileSync(existingMechanics, "utf8"), "# Owned mechanics\n");
+  for (const relative of ["scripts/wiki/navigate.cjs", "scripts/wiki/routing.cjs", "scripts/wiki/routing-policy.json", "scripts/wiki/lib/wiki-graph.cjs", "scripts/wiki/.navigation-kit.json"]) assert.ok(fs.existsSync(path.join(root, relative)), relative);
+  for (const relative of ["scripts/wiki/build-graph.cjs", "scripts/wiki/graph", "wiki/plans/INDEX.md", ".github/workflows/wiki-check.yml"]) assert.ok(!fs.existsSync(path.join(root, relative)), relative);
+  const agents = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8");
+  assert.match(agents, /--wiki-root "docs\/context" --intent why/);
+  assert.match(agents, /navigation only/);
+  assert.match(agents, /direct single-topic history or rationale/);
+  assert.match(agents, /Only for a cross-page question/);
+  assert.match(agents, /generated graph JSON/);
+  assert.match(agents, /ask one focused question/);
+  const route = node(path.join(root, "scripts/wiki/navigate.cjs"), ["--wiki-root", "docs/context", "--intent", "wiring", "--from", "docs/context/INDEX.md", "--to", "docs/context/decision.md"], { cwd: root });
+  assert.equal(route.status, 0, route.stderr);
+  assert.match(route.stdout, /2 file\(s\)/);
+  assert.match(route.stdout, /docs\/context\/INDEX\.md/);
+  assert.equal(init(root, ["--headless-navigation", "--wiki-root", "docs/context", "--dry-run"]).status, 0);
+  assert.equal(init(root, ["--headless-navigation", "--wiki-root", "../escape"]).status, 2);
+  assert.equal(init(root, ["--wiki-root", "docs/context"]).status, 2);
 });
 
 test("dry-run reports drift without writes and installer refuses symbolic-link escapes", () => {
@@ -123,17 +188,51 @@ test("Git initialization installs workflows and dispatches a legacy hook", () =>
   assert.match(hook, /legacy_hook/); assert.match(hook, /node scripts\/wiki\/pre-commit\.cjs/);
   assert.equal(fs.readFileSync(legacy, "utf8"), "#!/usr/bin/env sh\necho legacy\n");
   for (const workflow of ["wiki-check.yml", "wiki-sync.yml", "wiki-issue-sync.yml"]) assert.ok(fs.existsSync(path.join(root, ".github/workflows", workflow)));
+  const check = fs.readFileSync(path.join(root, ".github/workflows/wiki-check.yml"), "utf8");
   const sync = fs.readFileSync(path.join(root, ".github/workflows/wiki-sync.yml"), "utf8");
   const issueSync = fs.readFileSync(path.join(root, ".github/workflows/wiki-issue-sync.yml"), "utf8");
+  assert.match(check, /^name: Wiki integrity$/m);
+  assert.match(check, /pull_request:\n    branches: \[main\]/);
+  assert.match(check, /push:\n    branches: \[main\]/);
+  assert.match(check, /workflow_dispatch: \{\}/);
+  assert.match(check, /jobs:\n  check:/);
+  assert.match(check, /group: wiki-integrity-/);
+  assert.match(check, /fetch-depth: 0/);
+  assert.doesNotMatch(check, /pull-requests: read/);
+  assert.equal((check.match(/pnpm run wiki:check/g) || []).length, 1);
+  assert.equal((check.match(/run: pnpm run /g) || []).length, 1);
+  assert.doesNotMatch(check, /scripts\/wiki\/check\.cjs|gh api/);
   assert.match(sync, /^name: Sync context wiki$/m);
   assert.match(issueSync, /^name: Sync wiki issue state$/m);
   assert.doesNotMatch(sync, /slack|@verndale\/ai-pr/i);
+  for (const workflow of [check, sync, issueSync]) {
+    assert.match(workflow, /node-version: "24\.14\.0"/);
+    assert.match(workflow, /corepack enable && corepack install/);
+    assert.match(workflow, /pnpm install --frozen-lockfile/);
+  }
   for (const workflow of [sync, issueSync]) {
     assert.match(workflow, /GRAPHIFY_SKIP_HOOK: "1"/);
     assert.match(workflow, /persist-credentials: false/);
     assert.match(workflow, /gh auth setup-git/);
     assert.match(workflow, /PR_BOT_TOKEN/);
+    assert.match(workflow, /jobs:\n  sync:/);
+    assert.match(workflow, /--force-with-lease/);
+    assert.match(workflow, /gh pr reopen/);
+    assert.match(workflow, /github-actions\[bot\]/);
+    assert.match(workflow, /41898282\+github-actions\[bot\]@users\.noreply\.github\.com/);
   }
+  assert.match(sync, /workflow_dispatch:\n    inputs:\n      pr_number:/);
+  assert.match(sync, /files\?per_page=100.*--paginate --slurp/);
+  assert.match(sync, /commits\?per_page=100.*--paginate --slurp/);
+  assert.match(sync, /--arg repository "\$GITHUB_REPOSITORY"/);
+  assert.match(sync, /\{schemaVersion: 1, repository: \$repository,[^\n]+mergedAt: \$pr\.merged_at, changedPaths: \$files, commits: \$commits\}/);
+  assert.doesNotMatch(sync, /\{[^\n]*merged_at: \$pr\.merged_at|\{[^\n]*files: \$files/);
+  assert.match(sync, /branch="bot\/wiki-sync\/\$PR_NUMBER"/);
+  assert.match(sync, /group: wiki-sync-\$\{\{ inputs\.pr_number \|\| github\.event\.pull_request\.number \}\}/);
+  assert.match(sync, /PR_NUMBER: \$\{\{ inputs\.pr_number \|\| github\.event\.pull_request\.number \}\}/);
+  assert.match(sync, /bot\/wiki-\*\)/);
+  assert.match(issueSync, /cron: "30 11 \* \* \*" # Daily at 11:30 UTC/);
+  assert.match(issueSync, /workflow_dispatch: \{\}/);
   git(root, ["add", "."]);
   const committed = run("git", ["commit", "-m", "wiki bootstrap"], { cwd: root, env: { WIKI_HOME: temp("hook-home") } });
   assert.equal(committed.status, 0, committed.stderr); assert.match(`${committed.stdout}${committed.stderr}`, /legacy/);
@@ -316,7 +415,11 @@ test("audit preflight is transactional and rejects forged digests and path-trave
 test("graph is wiki-only, byte-stable, typed, and rejects dangling relationships", () => {
   const root = temp("graph"); assert.equal(init(root).status, 0);
   write(path.join(root, "code.md"), "# Code must not be a node\n");
-  write(path.join(root, "wiki/topics/runtime.md"), "# Runtime\n");
+  write(path.join(root, "wiki/topics/runtime.md"), [
+    "---", "aliases: [execution engine]", "---", "", "# Runtime", "",
+    "https://github.com/Example/One/issues/7 and https://github.com/Example/Two/pull/7. Ignore https://evil.example/github.com/example/one/issues/8.",
+    "", "````md", "```", "https://github.com/example/fenced/issues/9", "[missing](../topics/missing.md)", "```js", "````", "",
+  ].join("\n"));
   write(path.join(root, "wiki/journal/2026-01-01-runtime.md"), "---\ntopics: [runtime]\nplans: []\n---\n\n# Runtime journal\n\nSee [mechanics](../MECHANICS.md), the non-node [code](../../code.md), [local URI](file:///etc/passwd), and ![an image](../image.png).\n");
   const build = path.join(root, "scripts/wiki/build-graph.cjs");
   assert.equal(node(build, ["--repo", root], { cwd: root }).status, 0);
@@ -324,10 +427,17 @@ test("graph is wiki-only, byte-stable, typed, and rejects dangling relationships
   assert.equal(node(build, ["--repo", root], { cwd: root }).status, 0);
   assert.equal(fs.readFileSync(path.join(root, "scripts/wiki/graph/data/graph.json"), "utf8"), first);
   const graph = JSON.parse(first);
+  assert.equal(graph.version, 1);
+  assert.equal(graph.wikiRoot, "wiki");
   assert.ok(graph.nodes.every((item) => item.id.startsWith("wiki/")));
   assert.ok(!graph.nodes.some((item) => item.id === "code.md"));
   assert.ok(new Set(graph.nodes.map((item) => item.type)).has("topic"));
   assert.ok(new Set(graph.nodes.map((item) => item.type)).has("journal"));
+  const runtime = graph.nodes.find((item) => item.id === "wiki/topics/runtime.md");
+  assert.ok(runtime.bytes > 0);
+  assert.ok(Number.isInteger(runtime.degree));
+  assert.deepEqual(runtime.aliases, ["execution engine"]);
+  assert.deepEqual(runtime.githubRefs.map((item) => `${item.repository}:${item.kind}:${item.number}`), ["example/one:issue:7", "example/two:pull-request:7"]);
   write(path.join(root, "wiki/journal/broken.md"), "---\ntopics: [missing]\n---\n\n# Broken\n");
   assert.equal(node(build, ["--repo", root], { cwd: root }).status, 2);
   fs.unlinkSync(path.join(root, "wiki/journal/broken.md"));
@@ -335,10 +445,10 @@ test("graph is wiki-only, byte-stable, typed, and rejects dangling relationships
   const linked = node(build, ["--repo", root], { cwd: root });
   assert.equal(linked.status, 2); assert.match(linked.stderr, /symbolic links are not allowed/);
   const viewer = fs.readFileSync(path.join(root, "scripts/wiki/graph/viewer/index.html"), "utf8");
-  for (const id of ["controls", "search", "toggle-all", "legend", "reset", "graph", "panel", "p-neighbors"]) {
+  for (const id of ["controls", "search", "route-from", "route-to", "show-route", "route-status", "toggle-all", "legend", "reset", "graph", "panel", "p-neighbors", "p-route"]) {
     assert.match(viewer, new RegExp(`id="${id}"`));
   }
-  for (const asset of ["/viewer/viewer.css", "/viewer/vendor/graphology.umd.min.js", "/viewer/vendor/graphology-library.min.js", "/viewer/vendor/sigma.min.js", "/viewer/viewer.js"]) {
+  for (const asset of ["/viewer/viewer.css", "/viewer/vendor/graphology.umd.min.js", "/viewer/vendor/graphology-library.min.js", "/viewer/vendor/sigma.min.js", "/viewer/routing.js", "/viewer/viewer.js"]) {
     assert.match(viewer, new RegExp(`(?:href|src)="${asset.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`));
   }
 });
@@ -509,16 +619,117 @@ test("audit-plan-candidates infers plan dates from delivery evidence and sources
 });
 
 test("merge and issue helpers are deterministic", () => {
-  const root = temp("helpers"); assert.equal(init(root).status, 0);
+  const root = makeGit("helpers", "git@github.com:example/repo.git"); assert.equal(init(root).status, 0);
   const { reconcile } = require(path.join(root, "scripts/wiki/on-merge-sync.cjs"));
-  const context = { number: 42, title: "Add runtime", url: "https://github.com/example/repo/pull/42", merged_at: "2026-01-02T00:00:00Z", files: ["src/runtime.js"] };
+  const context = { schemaVersion: 1, repository: "example/repo", number: 42, title: "Add runtime", body: "Mentions https://github.com/example/ignored/issues/99. Fixes #7. Resolves example/other#7. Closes https://github.com/example/third/issues/8.", url: "https://github.com/example/repo/pull/42", mergedAt: "2026-01-02T00:00:00Z", changedPaths: ["src/runtime.js"], commits: [{ hash: "abc123", subject: "Add deterministic runtime" }] };
   assert.equal(reconcile(context, root).length, 1); assert.equal(reconcile(context, root).length, 0);
-  const { issueRefs, markClosed, setIssueState } = require(path.join(root, "scripts/wiki/refresh-issue-state.cjs"));
+  const { CLOSED_SUFFIX, issueRefs, markClosed, setIssueState } = require(path.join(root, "scripts/wiki/refresh-issue-state.cjs"));
   const issue = "https://github.com/example/repo/issues/7";
   assert.equal(issueRefs(issue).length, 1);
-  assert.equal(markClosed(markClosed(issue, issue), issue), `${issue} — closed`);
-  assert.equal(setIssueState(`${issue} — closed`, issue, "open"), issue);
-  assert.throws(() => reconcile({ ...context, number: "../../escape" }, root), /positive number/);
+  assert.equal(markClosed(markClosed(issue, issue), issue), `${issue}${CLOSED_SUFFIX}`);
+  assert.equal(setIssueState(`${issue}${CLOSED_SUFFIX}`, issue, "open"), issue);
+  assert.equal(setIssueState(`[issue](${issue})`, issue, "closed"), `[issue](${issue})${CLOSED_SUFFIX}`);
+  assert.equal(setIssueState(`[authored](${issue}) — closed`, issue, "closed"), `[authored](${issue}) — closed`);
+  assert.equal(setIssueState(`[authored](${issue}) — closed`, issue, "open"), `[authored](${issue}) — closed`);
+  const journal = fs.readFileSync(path.join(root, "wiki/journal/2026-01-02-pr-42-add-runtime.md"), "utf8");
+  assert.match(journal, /issue: "https:\/\/github\.com\/example\/repo\/issues\/7"/);
+  assert.match(journal, /issues: \["https:\/\/github\.com\/example\/repo\/issues\/7", "https:\/\/github\.com\/example\/other\/issues\/7", "https:\/\/github\.com\/example\/third\/issues\/8"\]/);
+  assert.doesNotMatch(journal, /ignored\/issues\/99/);
+  assert.match(journal, /Add deterministic runtime/);
+  assert.equal(issueRefs("https://evil.example/github.com/example/repo/issues/8").length, 0);
+  assert.throws(() => reconcile({ ...context, number: "../../escape" }, root), /positive/);
+  const escaped = path.join(root, ".github", "escaped.md");
+  write(escaped, "# Must stay unchanged\n");
+  assert.throws(() => reconcile({ ...context, changedPaths: ["wiki/journal/../../.github/escaped.md"] }, root), /normalized repository-relative/);
+  assert.equal(fs.readFileSync(escaped, "utf8"), "# Must stay unchanged\n");
+  assert.throws(() => reconcile({ ...context, url: "https://github.com/other/repo/pull/42" }, root), /URL must match/);
+  assert.throws(() => reconcile({ ...context, commits: [{ hash: 7, subject: "bad" }] }, root), /string hash and subject/);
+  assert.throws(() => reconcile({ ...context, title: 7 }, root), /title must be a string/);
+  assert.throws(() => reconcile({ ...context, body: [] }, root), /body must be a string/);
+  assert.throws(() => reconcile({ ...context, mergedAt: 1724400000 }, root), /parseable ISO date/);
+  assert.throws(() => reconcile({ ...context, mergedAt: "not-an-iso-date" }, root), /parseable ISO date/);
+  assert.throws(() => reconcile({ ...context, mergedAt: "2026" }, root), /parseable ISO date/);
+  const { url: _omittedUrl, ...withoutUrl } = context;
+  assert.throws(() => reconcile(withoutUrl, root), /URL must match/);
+  const linkedTarget = path.join(root, ".github", "linked-journal.md");
+  write(linkedTarget, "---\npr: pending\n---\n# Linked\n");
+  fs.symlinkSync(linkedTarget, path.join(root, "wiki", "journal", "linked.md"));
+  assert.throws(() => reconcile({ ...context, changedPaths: ["wiki/journal/linked.md"] }, root), /unsafe journal path/);
+  assert.match(fs.readFileSync(linkedTarget, "utf8"), /pr: pending/);
+});
+
+test("merge reconciliation adds every closing issue to an existing journal", () => {
+  const root = makeGit("merge-existing", "git@github.com:example/repo.git"); assert.equal(init(root).status, 0);
+  const journal = path.join(root, "wiki/journal/existing.md");
+  write(journal, "---\npr: pending\nissue: https://github.com/example/legacy/issues/1\ntopics: []\nplans: []\n---\n\n# Existing\n");
+  const { reconcile } = require(path.join(root, "scripts/wiki/on-merge-sync.cjs"));
+  const context = { number: 43, title: "Existing", body: "Fixes #2. Resolves example/other#2.", url: "https://github.com/example/repo/pull/43", merged_at: "2026-01-03T00:00:00Z", files: ["src/runtime.js", "wiki/journal/existing.md"], commits: [] };
+  assert.deepEqual(reconcile(context, root), ["wiki/journal/existing.md"]);
+  const text = fs.readFileSync(journal, "utf8");
+  assert.match(text, /pr: https:\/\/github\.com\/example\/repo\/pull\/43/);
+  assert.match(text, /issues: \["https:\/\/github\.com\/example\/legacy\/issues\/1", "https:\/\/github\.com\/example\/repo\/issues\/2", "https:\/\/github\.com\/example\/other\/issues\/2"\]/);
+  assert.deepEqual(reconcile(context, root), []);
+});
+
+test("issue refresh scopes Open threads, caches lookups, and owns only its trailing marker", () => {
+  const root = temp("issue-refresh"); assert.equal(init(root).status, 0);
+  const modulePath = path.join(root, "scripts/wiki/refresh-issue-state.cjs");
+  const { CLOSED_SUFFIX, refresh } = require(modulePath);
+  const topics = path.join(root, "wiki", "topics");
+  const one = "https://github.com/example/repo/issues/1";
+  const two = "https://github.com/example/other/issues/2";
+  const fenced = "https://github.com/example/fenced/issues/3";
+  const first = path.join(topics, "first.md");
+  const second = path.join(topics, "second.md");
+  const outside = path.join(temp("issue-refresh-outside"), "linked.md");
+  write(first, [
+    "# First", "", "## Decisions", "", `- [decision](${one})`, "", "## Open threads", "",
+    "```md", "## Decisions", `- [fenced](${fenced})`, "```", "",
+    `- [one](${one}) and [two](${two})`, `- [authored](${two}) — closed`, "",
+  ].join("\n"));
+  write(second, `# Second\n\n## Open threads\n\n- [duplicate](${one})\n`);
+  write(outside, `# Outside\n\n## Open threads\n\n- [linked](https://github.com/example/outside/issues/99)\n`);
+  fs.symlinkSync(outside, path.join(topics, "linked.md"));
+  write(path.join(topics, "third.md"), [
+    "# Third", "", "## Decisions", "", "~~~md", "## Open threads", `- [fenced heading](${fenced})`, "~~~", "", `- [still a decision](${fenced})`, "",
+  ].join("\n"));
+  write(path.join(topics, "long-fence.md"), [
+    "# Long fence", "", "## Open threads", "", "````md", "```", `- [nested](${fenced})`, "```js", "````", "",
+  ].join("\n"));
+  const calls = [];
+  const closed = refresh(topics, (issue) => { calls.push(`${issue.repository}#${issue.number}`); return "closed"; });
+  assert.deepEqual(calls, ["example/other#2", "example/repo#1"]);
+  assert.doesNotMatch(fs.readFileSync(outside, "utf8"), /wiki-issue-state/);
+  assert.equal(closed.warnings.length, 0);
+  const closedText = fs.readFileSync(first, "utf8");
+  assert.match(closedText, new RegExp(`\\[one\\]\\(${one.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\) and \\[two\\]`));
+  assert.doesNotMatch(closedText, /issues\/1 — closed\)/);
+  assert.doesNotMatch(closedText, /fenced\/issues\/3[^\n]*wiki-issue-state/);
+  assert.match(closedText, new RegExp(`## Decisions[\\s\\S]*\\[decision\\]\\(${one.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\)\\n\\n## Open threads`));
+  assert.match(closedText, new RegExp(`${CLOSED_SUFFIX.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "m"));
+  const reopened = refresh(topics, (issue) => issue.number === 1 ? "open" : "closed");
+  assert.ok(reopened.changes.length >= 1);
+  const reopenedText = fs.readFileSync(first, "utf8");
+  assert.doesNotMatch(reopenedText.split("## Open threads")[1].split("\n")[2], /wiki-issue-state:closed/);
+  assert.match(reopenedText, /\[authored\][^\n]+ — closed$/m);
+  const failed = refresh(topics, (issue) => { if (issue.number === 1) throw new Error("offline"); return "closed"; });
+  assert.equal(failed.warnings.length, 1);
+  const mixed = path.join(topics, "mixed.md");
+  const mixedBody = `# Mixed\n\n## Open threads\n\n- [open](https://github.com/example/mixed/issues/4) and [unknown](https://github.com/example/mixed/issues/5)${CLOSED_SUFFIX}\n`;
+  write(mixed, mixedBody);
+  const uncertain = refresh(topics, (issue) => {
+    if (issue.repository === "example/mixed" && issue.number === 4) return "open";
+    if (issue.repository === "example/mixed" && issue.number === 5) throw new Error("offline");
+    return "closed";
+  });
+  assert.ok(uncertain.warnings.some((warning) => /example\/mixed issue #5/.test(warning)));
+  assert.equal(fs.readFileSync(mixed, "utf8"), mixedBody);
+  const linkedRoot = temp("issue-refresh-linked-root");
+  const externalWiki = temp("issue-refresh-external-wiki");
+  write(path.join(externalWiki, "topics", "outside.md"), `# Outside\n\n## Open threads\n\n- [outside](${one})\n`);
+  fs.symlinkSync(externalWiki, path.join(linkedRoot, "wiki"), "dir");
+  assert.throws(() => refresh(path.join(linkedRoot, "wiki", "topics"), () => "closed", linkedRoot), /symbolic link/);
+  assert.doesNotMatch(fs.readFileSync(path.join(externalWiki, "topics", "outside.md"), "utf8"), /wiki-issue-state/);
 });
 
 test("pre-commit does not stage graph output derived from unstaged wiki content", () => {
@@ -532,6 +743,20 @@ test("pre-commit does not stage graph output derived from unstaged wiki content"
   assert.equal(result.status, 0); assert.match(result.stderr, /unstaged wiki changes/);
   assert.equal(fs.readFileSync(graphFile, "utf8"), before);
   assert.equal(git(root, ["diff", "--cached", "--name-only"]), "code.js");
+});
+
+test("pre-commit rebuilds and stages the graph after a staged wiki deletion", () => {
+  const root = makeGit("precommit-delete"); assert.equal(init(root).status, 0);
+  const topic = path.join(root, "wiki/topics/deleted.md");
+  write(topic, "# Deleted topic\n");
+  assert.equal(node(path.join(root, "scripts/wiki/build-graph.cjs"), [], { cwd: root }).status, 0);
+  git(root, ["add", "."]); git(root, ["-c", "core.hooksPath=/dev/null", "commit", "-qm", "baseline"]);
+  fs.unlinkSync(topic); git(root, ["add", "-u", "--", "wiki/topics/deleted.md"]);
+  const result = node(path.join(root, "scripts/wiki/pre-commit.cjs"), [], { cwd: root, env: { WIKI_HOME: temp("precommit-delete-home") } });
+  assert.equal(result.status, 0, result.stderr);
+  const stagedGraph = JSON.parse(git(root, ["show", ":scripts/wiki/graph/data/graph.json"]));
+  assert.ok(!stagedGraph.nodes.some((item) => item.id === "wiki/topics/deleted.md"));
+  assert.match(git(root, ["diff", "--cached", "--name-only"]), /scripts\/wiki\/graph\/data\/graph\.json/);
 });
 
 test("graph server resolver refuses traversal and symbolic-link disclosure", () => {
@@ -573,6 +798,7 @@ test("graph server selects the next port unless a port was explicitly requested"
 
 test("Sigma viewer matches the reference shell, runs ForceAtlas2, and applies search/type/focus reducers", async () => {
   const source = fs.readFileSync(path.join(SKILL, "assets/repository/scripts/wiki/graph/viewer/viewer.js"), "utf8");
+  const routingSource = fs.readFileSync(path.join(SKILL, "assets/repository/scripts/wiki/graph/viewer/routing.js"), "utf8");
   function element() {
     const classes = new Set();
     return {
@@ -590,7 +816,7 @@ test("Sigma viewer matches the reference shell, runs ForceAtlas2, and applies se
       setAttribute(name, value) { this[name] = value; },
     };
   }
-  const ids = ["stats", "search", "legend", "reset", "toggle-all", "panel-close", "panel", "graph", "p-label", "p-type", "p-meta", "p-neighbors"];
+  const ids = ["stats", "search", "legend", "reset", "toggle-all", "panel-close", "panel", "graph", "p-label", "p-type", "p-meta", "p-neighbors", "route-from", "route-to", "show-route", "route-status", "node-panel", "route-panel", "p-route"];
   const elements = Object.fromEntries(ids.map((id) => [id, element()]));
   const document = {
     querySelector: (selector) => elements[selector.slice(1)],
@@ -616,22 +842,37 @@ test("Sigma viewer matches the reference shell, runs ForceAtlas2, and applies se
     getCamera() { return { animate() {}, animatedReset() {} }; }
     getNodeDisplayData(id) { return this.graph.nodes.get(id); }
   }
-  const nodes = ["index", "topic", "journal", "plan"].map((type, i) => ({ id: `wiki/${type}-${i}.md`, label: type, type, x: i, y: i, size: 8 }));
-  const edges = [{ id: "edge-1", source: "wiki/topic-1.md", target: "wiki/plan-3.md", relation: "topic" }];
+  const nodes = ["index", "topic", "journal", "plan"].map((type, i) => ({ id: `wiki/${type}-${i}.md`, label: type, type, aliases: [], githubRefs: type === "topic" ? [{ repository: "example/repo", kind: "issue", number: 7, url: "https://github.com/example/repo/issues/7" }] : [], bytes: 100 + i, degree: type === "topic" || type === "plan" ? 1 : 0, x: i, y: i, size: 8 }));
+  const edges = [{ id: "edge-1", source: "wiki/topic-1.md", target: "wiki/plan-3.md", type: "topic", relation: "topic" }];
+  const policy = { edgeCosts: { topic: 1, plan: 1, link: 3 }, hubPenalty: 0.5, bytePenaltyPerKiB: 0.05, excludedIntermediateTypes: ["index"] };
   const window = {};
-  vm.runInNewContext(source, {
-    fetch: async () => ({ ok: true, json: async () => ({ nodes, edges }) }),
+  const context = {
+    fetch: async (url) => ({ ok: true, json: async () => String(url).includes("routing-policy") ? policy : ({ nodes, edges }) }),
     graphology: { MultiGraph },
     graphologyLibrary: {
       layout: { circular: { assign() { circularCalls++; } } },
       layoutForceAtlas2: { inferSettings: () => ({}), assign() { forceCalls++; } },
     },
     Sigma, document, window, console, Map, Set,
-  });
+  };
+  vm.runInNewContext(routingSource, context);
+  vm.runInNewContext(source, context);
   await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(window.WikiRouting.normalizeGithubQuery("https://github.com/example/repo/issues/9007199254740993?x=1"), "https://github.com/example/repo/issues/9007199254740993?x=1");
+  assert.equal(window.WikiRouting.validPolicy(policy, { nodes, edges }), true);
+  assert.equal(window.WikiRouting.validPolicy({ ...policy, excludedIntermediateTypes: "index" }, { nodes, edges }), false);
+  assert.equal(window.WikiRouting.validPolicy({ ...policy, excludedIntermediateTypes: [null] }, { nodes, edges }), false);
+  assert.equal(window.WikiRouting.validPolicy({ ...policy, edgeCosts: { plan: 1 } }, { nodes, edges }), false);
+  assert.equal(window.WikiRouting.shortestPath({ nodes, edges }, nodes[1].id, nodes[3].id, { ...policy, edgeCosts: { plan: 1 } }), null);
   assert.equal(renderer.graph.nodes.size, 4);
   assert.equal(circularCalls, 1);
   assert.equal(forceCalls, 1);
+  elements.search.listeners.input({ target: { value: "https://github.com/Example/Repo/issues/7?x=1#note" } });
+  assert.equal(renderer.settings.nodeReducer("wiki/topic-1.md", renderer.graph.nodes.get("wiki/topic-1.md")).label, "topic");
+  assert.equal(renderer.settings.nodeReducer("wiki/plan-3.md", renderer.graph.nodes.get("wiki/plan-3.md")).label, "");
+  elements.search.listeners.input({ target: { value: "example/repo#7" } });
+  assert.equal(renderer.settings.nodeReducer("wiki/topic-1.md", renderer.graph.nodes.get("wiki/topic-1.md")).label, "topic");
+  assert.equal(renderer.settings.nodeReducer("wiki/plan-3.md", renderer.graph.nodes.get("wiki/plan-3.md")).label, "");
   elements.search.listeners.input({ target: { value: "topic" } });
   assert.equal(renderer.settings.nodeReducer("wiki/plan-3.md", renderer.graph.nodes.get("wiki/plan-3.md")).label, "");
   const topicLegend = elements.legend.children.find((item) => item.dataset.type === "topic");
@@ -641,6 +882,13 @@ test("Sigma viewer matches the reference shell, runs ForceAtlas2, and applies se
   assert.equal(elements["p-label"].textContent, "topic");
   assert.equal(elements.panel.classList.contains("hidden"), false);
   assert.equal(window.WikiGraph.state.focus, "wiki/topic-1.md");
+  elements["route-from"].value = "wiki/topic-1.md";
+  elements["route-to"].value = "wiki/plan-3.md";
+  elements["show-route"].listeners.click();
+  assert.deepEqual([...window.WikiGraph.state.routeNodes], ["wiki/topic-1.md", "wiki/plan-3.md"]);
+  assert.match(elements["route-status"].textContent, /Authority: wiki\/topic-1\.md → wiki\/plan-3\.md.*2 file\(s\).*204 B/);
+  assert.match(elements["p-route"].children[0].textContent, /query match.*source: wiki\/topic-1\.md.*101 B/);
+  assert.match(elements["p-route"].children[1].textContent, /→ topic.*target: wiki\/plan-3\.md.*103 B/);
   assert.doesNotMatch(source, /innerHTML/);
 });
 

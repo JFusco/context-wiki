@@ -15,6 +15,7 @@ Missing `CLAUDE.md` files and files containing additional authored guidance reta
 - Checksum protection for installed assets is unchanged.
 - Managed `AGENTS.md` and pre-commit blocks remain idempotent.
 - The repository-local wiki graph contains Markdown nodes under `wiki/` only.
+- A custom root may opt into `--headless-navigation --wiki-root <dir>`; that mode installs route scripts and managed agent traversal only, leaving viewer, committed graph, plan ledger, hooks, workflows, and authored mechanics untouched.
 
 ## Husky 9 dispatch
 
@@ -36,3 +37,4 @@ The persistent checkout may live outside `~/.agents/skills/wiki` and be exposed 
 - The installer integration suite proves a standalone import remains byte-identical across installation and a clean dry run.
 - The unit suite proves files with other authored content still receive the managed import block.
 - Global validation proves the agent and Claude discovery symlinks resolve to the same persistent checkout.
+- [Issue #7](https://github.com/JFusco/context-wiki/issues/7) adds the custom-root headless boundary and its absence/idempotence tests.

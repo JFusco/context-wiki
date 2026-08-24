@@ -3,92 +3,8 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const { repoRoot, walk, slash, digest, ensureInside, hasSymlinkComponent, atomicWrite } = require("./lib/common.cjs");
-const { splitFrontmatter, list, titleFromBody } = require("./lib/frontmatter.cjs");
-
-function kind(id) {
-  if (id.startsWith("wiki/topics/")) return "topic";
-  if (id.startsWith("wiki/journal/")) return "journal";
-  if (id.startsWith("wiki/plans/") && id !== "wiki/plans/INDEX.md") return "plan";
-  return "index";
-}
-
-function resolveWikiLink(root, source, href) {
-  const clean = href.split("#")[0].split("?")[0];
-  if (!clean || /^(?:[a-z][a-z0-9+.-]*:|#)/i.test(href)) return null;
-  const wikiRoot = path.join(root, "wiki");
-  let target = clean.startsWith("/") ? path.join(root, clean.slice(1)) : path.resolve(path.dirname(source), decodeURIComponent(clean));
-  if (!path.extname(target)) target += ".md";
-  else if (path.extname(target).toLowerCase() !== ".md") return null;
-  if (!ensureInside(wikiRoot, target)) return null;
-  if (slash(path.relative(root, target)) === "wiki/connections.md") return null;
-  return target;
-}
-
-function frontmatterTarget(root, type, value) {
-  if (!value) return null;
-  if (value.startsWith("wiki/")) {
-    const target = path.join(root, value);
-    return path.extname(target) ? target : `${target}.md`;
-  }
-  if (type === "topic") return path.join(root, "wiki", "topics", value.endsWith(".md") ? value : `${value}.md`);
-  return path.join(root, "wiki", "plans", value.endsWith(".md") ? value : `${value}.md`);
-}
-
-function collect(root) {
-  const wikiRoot = path.join(root, "wiki");
-  if (!fs.existsSync(wikiRoot)) throw new Error("wiki/ is missing");
-  if (fs.lstatSync(wikiRoot).isSymbolicLink()) throw new Error("wiki/ must not be a symbolic link");
-  const symlinks = [];
-  (function scan(directory) {
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-      const absolute = path.join(directory, entry.name);
-      if (entry.isSymbolicLink()) symlinks.push(slash(path.relative(root, absolute)));
-      else if (entry.isDirectory()) scan(absolute);
-    }
-  })(wikiRoot);
-  if (symlinks.length) throw new Error(`symbolic links are not allowed under wiki/: ${symlinks.join(", ")}`);
-  const files = walk(wikiRoot, (file) => file.endsWith(".md") && slash(path.relative(root, file)) !== "wiki/connections.md");
-  const idFor = new Map(files.map((file) => [path.resolve(file), slash(path.relative(root, file))]));
-  const nodes = files.map((file, index) => {
-    const text = fs.readFileSync(file, "utf8");
-    const parsed = splitFrontmatter(text);
-    const id = idFor.get(path.resolve(file));
-    const angle = files.length ? 2 * Math.PI * index / files.length : 0;
-    return { id, label: titleFromBody(parsed.body, path.basename(file, ".md")), type: kind(id), x: Number(Math.cos(angle).toFixed(6)), y: Number(Math.sin(angle).toFixed(6)), size: kind(id) === "index" ? 12 : 8 };
-  });
-  const edges = [];
-  const edgeKeys = new Set();
-  function add(sourceId, absoluteTarget, relation) {
-    const targetId = idFor.get(path.resolve(absoluteTarget));
-    if (!targetId) {
-      // Archived plan bodies cite repository files (README.md, skills/…) as prose links.
-      if (sourceId.startsWith("wiki/plans/") && sourceId !== "wiki/plans/INDEX.md") return;
-      throw new Error(`dangling ${relation}: ${sourceId} -> ${slash(path.relative(root, absoluteTarget))}`);
-    }
-    const key = `${sourceId}\0${targetId}\0${relation}`;
-    if (sourceId === targetId || edgeKeys.has(key)) return;
-    edgeKeys.add(key);
-    edges.push({ id: digest(key).slice(0, 16), source: sourceId, target: targetId, relation });
-  }
-  for (const file of files) {
-    const text = fs.readFileSync(file, "utf8");
-    const parsed = splitFrontmatter(text);
-    const sourceId = idFor.get(path.resolve(file));
-    for (const match of parsed.body.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
-      const target = resolveWikiLink(root, file, match[1]);
-      if (target) add(sourceId, target, "link");
-    }
-    for (const topic of list(parsed.raw, "topics")) add(sourceId, frontmatterTarget(root, "topic", topic), "topic");
-    if (sourceId.startsWith("wiki/journal/")) {
-      for (const plan of [...list(parsed.raw, "plans"), ...list(parsed.raw, "plan")]) add(sourceId, frontmatterTarget(root, "plan", plan), "plan");
-    }
-  }
-  nodes.sort((a, b) => a.id.localeCompare(b.id));
-  edges.sort((a, b) => a.id.localeCompare(b.id));
-  if (nodes.some((node) => !node.id.startsWith("wiki/"))) throw new Error("graph contains a node outside wiki/");
-  return { version: 1, nodes, edges };
-}
+const { repoRoot, slash, hasSymlinkComponent, atomicWrite } = require("./lib/common.cjs");
+const { collect, resolveWikiLink, kind } = require("./lib/wiki-graph.cjs");
 
 function connections(graph) {
   const counts = { index: 0, topic: 0, journal: 0, plan: 0 };
@@ -97,9 +13,9 @@ function connections(graph) {
     "# Wiki connections", "", "Generated by `node scripts/wiki/build-graph.cjs`. Do not edit by hand.", "",
     `- Indexes: ${counts.index}`, `- Topics: ${counts.topic}`, `- Journals: ${counts.journal}`, `- Plans: ${counts.plan}`, `- Relationships: ${graph.edges.length}`, "", "## Relationships", "",
   ];
-  const markdownLabel = (value) => String(value).replace(/\r?\n/g, " ").replace(/\\/g, "\\\\").replace(/([\[\]])/g, "\\$1");
+  const markdownLabel = (value) => String(value).replace(/\r?\n/g, " ").replace(/\\/g, "\\\\").replaceAll("[", "\\[").replaceAll("]", "\\]");
   const markdownHref = (value) => `../${String(value).split("/").map(encodeURIComponent).join("/")}`;
-  for (const edge of graph.edges) lines.push(`- [${markdownLabel(edge.source)}](${markdownHref(edge.source)}) → [${markdownLabel(edge.target)}](${markdownHref(edge.target)}) (${edge.relation})`);
+  for (const edge of graph.edges) lines.push(`- [${markdownLabel(edge.source)}](${markdownHref(edge.source)}) → [${markdownLabel(edge.target)}](${markdownHref(edge.target)}) (${edge.type})`);
   if (!graph.edges.length) lines.push("- None yet.");
   return lines.join("\n") + "\n";
 }

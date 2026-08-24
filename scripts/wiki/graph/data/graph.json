@@ -1,10 +1,25 @@
 {
   "version": 1,
+  "wikiRoot": "wiki",
+  "counts": {
+    "nodes": 19,
+    "edges": 44,
+    "byType": {
+      "index": 3,
+      "journal": 5,
+      "plan": 5,
+      "topic": 6
+    }
+  },
   "nodes": [
     {
       "id": "wiki/INDEX.md",
       "label": "Context wiki",
       "type": "index",
+      "aliases": [],
+      "githubRefs": [],
+      "bytes": 1361,
+      "degree": 2,
       "x": 1,
       "y": 0,
       "size": 12
@@ -13,120 +28,377 @@
       "id": "wiki/journal/2026-08-23-ai-pr-and-ai-commit-bootstrap.md",
       "label": "AI pull-request and commit automation bootstrap",
       "type": "journal",
-      "x": 0.707107,
-      "y": 0.707107,
+      "aliases": [],
+      "githubRefs": [],
+      "bytes": 1658,
+      "degree": 2,
+      "x": 0.789141,
+      "y": 0.614213,
       "size": 8
     },
     {
       "id": "wiki/journal/2026-08-23-graph-viewer-parity-and-port-fallback.md",
       "label": "Graph viewer parity and port fallback",
       "type": "journal",
-      "x": 0.382683,
-      "y": 0.92388,
+      "aliases": [],
+      "githubRefs": [],
+      "bytes": 1938,
+      "degree": 3,
+      "x": 0.546948,
+      "y": 0.837166,
       "size": 8
     },
     {
       "id": "wiki/journal/2026-08-23-plan-topic-integrity.md",
       "label": "Plan topic integrity",
       "type": "journal",
-      "x": 0,
-      "y": 1,
+      "aliases": [],
+      "githubRefs": [
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 5,
+          "url": "https://github.com/jfusco/context-wiki/issues/5"
+        }
+      ],
+      "bytes": 2391,
+      "degree": 7,
+      "x": 0.245485,
+      "y": 0.9694,
+      "size": 8
+    },
+    {
+      "id": "wiki/journal/2026-08-23-promote-canonical-wiki-parity.md",
+      "label": "Promote canonical wiki parity",
+      "type": "journal",
+      "aliases": [],
+      "githubRefs": [
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 7,
+          "url": "https://github.com/jfusco/context-wiki/issues/7"
+        }
+      ],
+      "bytes": 2555,
+      "degree": 7,
+      "x": -0.082579,
+      "y": 0.996584,
       "size": 8
     },
     {
       "id": "wiki/journal/2026-08-23-wiki-bootstrap-and-claude-import.md",
       "label": "Wiki bootstrap and standalone Claude import",
       "type": "journal",
-      "x": -0.382683,
-      "y": 0.92388,
+      "aliases": [],
+      "githubRefs": [
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 3,
+          "url": "https://github.com/jfusco/context-wiki/issues/3"
+        }
+      ],
+      "bytes": 2218,
+      "degree": 4,
+      "x": -0.401695,
+      "y": 0.915773,
       "size": 8
     },
     {
       "id": "wiki/MECHANICS.md",
       "label": "Wiki mechanics",
       "type": "index",
-      "x": 0.92388,
-      "y": 0.382683,
+      "aliases": [],
+      "githubRefs": [],
+      "bytes": 2907,
+      "degree": 2,
+      "x": 0.945817,
+      "y": 0.324699,
       "size": 12
     },
     {
       "id": "wiki/plans/2026-08-20-global-wiki-skill-and-repository-bootstrap-f45de79a63.md",
       "label": "Global `/wiki` Skill and Repository Bootstrap",
       "type": "plan",
-      "x": -0.707107,
-      "y": 0.707107,
+      "aliases": [],
+      "githubRefs": [],
+      "bytes": 8073,
+      "degree": 4,
+      "x": -0.677282,
+      "y": 0.735724,
       "size": 8
     },
     {
       "id": "wiki/plans/2026-08-23-add-focused-cjs-unit-tests-6569724de4.md",
       "label": "Add focused `.cjs` unit tests",
       "type": "plan",
-      "x": -0.92388,
-      "y": 0.382683,
+      "aliases": [],
+      "githubRefs": [
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "pull-request",
+          "number": 2,
+          "url": "https://github.com/jfusco/context-wiki/pull/2"
+        }
+      ],
+      "bytes": 2453,
+      "degree": 4,
+      "x": -0.879474,
+      "y": 0.475947,
       "size": 8
     },
     {
       "id": "wiki/plans/2026-08-23-create-tracking-issue-and-implementation-branch-aa427de2df.md",
       "label": "Create tracking issue and implementation branch",
       "type": "plan",
-      "x": -1,
-      "y": 0,
+      "aliases": [],
+      "githubRefs": [
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 1,
+          "url": "https://github.com/jfusco/context-wiki/issues/1"
+        },
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "pull-request",
+          "number": 2,
+          "url": "https://github.com/jfusco/context-wiki/pull/2"
+        }
+      ],
+      "bytes": 1895,
+      "degree": 4,
+      "x": -0.986361,
+      "y": 0.164595,
+      "size": 8
+    },
+    {
+      "id": "wiki/plans/2026-08-23-promote-canonical-wiki-parity-369416673b.md",
+      "label": "Promote canonical wiki parity",
+      "type": "plan",
+      "aliases": [],
+      "githubRefs": [
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 7,
+          "url": "https://github.com/jfusco/context-wiki/issues/7"
+        }
+      ],
+      "bytes": 1924,
+      "degree": 4,
+      "x": -0.986361,
+      "y": -0.164595,
       "size": 8
     },
     {
       "id": "wiki/plans/2026-08-23-self-host-the-wiki-with-standalone-claude-import-compatibility-37a2441a28.md",
       "label": "Self-Host the Wiki with Standalone CLAUDE Import Compatibility",
       "type": "plan",
-      "x": -0.92388,
-      "y": -0.382683,
+      "aliases": [],
+      "githubRefs": [
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 1,
+          "url": "https://github.com/jfusco/context-wiki/issues/1"
+        },
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 3,
+          "url": "https://github.com/jfusco/context-wiki/issues/3"
+        },
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "pull-request",
+          "number": 2,
+          "url": "https://github.com/jfusco/context-wiki/pull/2"
+        }
+      ],
+      "bytes": 4312,
+      "degree": 5,
+      "x": -0.879474,
+      "y": -0.475947,
       "size": 8
     },
     {
       "id": "wiki/plans/INDEX.md",
       "label": "Plan ledger",
       "type": "index",
-      "x": -0.707107,
-      "y": -0.707107,
+      "aliases": [],
+      "githubRefs": [
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 1,
+          "url": "https://github.com/jfusco/context-wiki/issues/1"
+        },
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 2,
+          "url": "https://github.com/jfusco/context-wiki/issues/2"
+        },
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 3,
+          "url": "https://github.com/jfusco/context-wiki/issues/3"
+        },
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 7,
+          "url": "https://github.com/jfusco/context-wiki/issues/7"
+        },
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 38,
+          "url": "https://github.com/jfusco/context-wiki/issues/38"
+        },
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 371,
+          "url": "https://github.com/jfusco/context-wiki/issues/371"
+        },
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "pull-request",
+          "number": 2,
+          "url": "https://github.com/jfusco/context-wiki/pull/2"
+        },
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "pull-request",
+          "number": 561,
+          "url": "https://github.com/jfusco/context-wiki/pull/561"
+        }
+      ],
+      "bytes": 46750,
+      "degree": 7,
+      "x": -0.677282,
+      "y": -0.735724,
       "size": 12
     },
     {
       "id": "wiki/topics/graph-viewer.md",
       "label": "Graph viewer",
       "type": "topic",
-      "x": -0.382683,
-      "y": -0.92388,
+      "aliases": [],
+      "githubRefs": [],
+      "bytes": 1951,
+      "degree": 4,
+      "x": -0.401695,
+      "y": -0.915773,
       "size": 8
     },
     {
       "id": "wiki/topics/installer-contract.md",
       "label": "Installer contract",
       "type": "topic",
-      "x": 0,
-      "y": -1,
+      "aliases": [],
+      "githubRefs": [
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 3,
+          "url": "https://github.com/jfusco/context-wiki/issues/3"
+        },
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 7,
+          "url": "https://github.com/jfusco/context-wiki/issues/7"
+        }
+      ],
+      "bytes": 2722,
+      "degree": 7,
+      "x": -0.082579,
+      "y": -0.996584,
       "size": 8
     },
     {
       "id": "wiki/topics/repository-automation.md",
       "label": "Repository automation",
       "type": "topic",
-      "x": 0.382683,
-      "y": -0.92388,
+      "aliases": [],
+      "githubRefs": [
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 7,
+          "url": "https://github.com/jfusco/context-wiki/issues/7"
+        }
+      ],
+      "bytes": 1586,
+      "degree": 2,
+      "x": 0.245485,
+      "y": -0.9694,
       "size": 8
     },
     {
       "id": "wiki/topics/script-testing.md",
       "label": "Script testing",
       "type": "topic",
-      "x": 0.707107,
-      "y": -0.707107,
+      "aliases": [],
+      "githubRefs": [
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 5,
+          "url": "https://github.com/jfusco/context-wiki/issues/5"
+        }
+      ],
+      "bytes": 1216,
+      "degree": 7,
+      "x": 0.546948,
+      "y": -0.837166,
+      "size": 8
+    },
+    {
+      "id": "wiki/topics/wiki-navigation-and-automation.md",
+      "label": "Wiki navigation and automation",
+      "type": "topic",
+      "aliases": [
+        "route-first wiki",
+        "portable wiki graph",
+        "wiki Actions"
+      ],
+      "githubRefs": [
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 7,
+          "url": "https://github.com/jfusco/context-wiki/issues/7"
+        }
+      ],
+      "bytes": 3093,
+      "degree": 3,
+      "x": 0.789141,
+      "y": -0.614213,
       "size": 8
     },
     {
       "id": "wiki/topics/wiki-system.md",
       "label": "Wiki system",
       "type": "topic",
-      "x": 0.92388,
-      "y": -0.382683,
+      "aliases": [],
+      "githubRefs": [
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 5,
+          "url": "https://github.com/jfusco/context-wiki/issues/5"
+        }
+      ],
+      "bytes": 2228,
+      "degree": 10,
+      "x": 0.945817,
+      "y": -0.324699,
       "size": 8
     }
   ],
@@ -135,210 +407,308 @@
       "id": "001373ecc2017886",
       "source": "wiki/journal/2026-08-23-graph-viewer-parity-and-port-fallback.md",
       "target": "wiki/topics/graph-viewer.md",
+      "type": "topic",
       "relation": "topic"
     },
     {
       "id": "094d73c4b0b26557",
       "source": "wiki/journal/2026-08-23-plan-topic-integrity.md",
       "target": "wiki/plans/2026-08-23-create-tracking-issue-and-implementation-branch-aa427de2df.md",
+      "type": "plan",
       "relation": "plan"
     },
     {
       "id": "0a6b33d8653947ef",
       "source": "wiki/plans/2026-08-23-create-tracking-issue-and-implementation-branch-aa427de2df.md",
       "target": "wiki/topics/script-testing.md",
+      "type": "topic",
+      "relation": "topic"
+    },
+    {
+      "id": "0ae7b50d1aeb72f5",
+      "source": "wiki/journal/2026-08-23-promote-canonical-wiki-parity.md",
+      "target": "wiki/plans/2026-08-23-promote-canonical-wiki-parity-369416673b.md",
+      "type": "link",
+      "relation": "link"
+    },
+    {
+      "id": "0d4d66553b72260c",
+      "source": "wiki/journal/2026-08-23-promote-canonical-wiki-parity.md",
+      "target": "wiki/topics/repository-automation.md",
+      "type": "topic",
+      "relation": "topic"
+    },
+    {
+      "id": "161b0e42b682ca4e",
+      "source": "wiki/journal/2026-08-23-promote-canonical-wiki-parity.md",
+      "target": "wiki/topics/wiki-navigation-and-automation.md",
+      "type": "topic",
       "relation": "topic"
     },
     {
       "id": "1d46e0f2e553f4ae",
       "source": "wiki/topics/script-testing.md",
       "target": "wiki/topics/wiki-system.md",
+      "type": "link",
+      "relation": "link"
+    },
+    {
+      "id": "26a8b23182132a11",
+      "source": "wiki/journal/2026-08-23-promote-canonical-wiki-parity.md",
+      "target": "wiki/topics/wiki-navigation-and-automation.md",
+      "type": "link",
       "relation": "link"
     },
     {
       "id": "2da41c12bc884d8b",
       "source": "wiki/plans/INDEX.md",
       "target": "wiki/plans/2026-08-23-add-focused-cjs-unit-tests-6569724de4.md",
+      "type": "link",
       "relation": "link"
     },
     {
       "id": "355b085344694472",
       "source": "wiki/INDEX.md",
       "target": "wiki/MECHANICS.md",
+      "type": "link",
       "relation": "link"
     },
     {
       "id": "39f8563e208acd43",
       "source": "wiki/journal/2026-08-23-graph-viewer-parity-and-port-fallback.md",
       "target": "wiki/topics/installer-contract.md",
+      "type": "topic",
       "relation": "topic"
     },
     {
       "id": "4807237ed84a35db",
       "source": "wiki/journal/2026-08-23-graph-viewer-parity-and-port-fallback.md",
       "target": "wiki/topics/wiki-system.md",
+      "type": "topic",
       "relation": "topic"
     },
     {
       "id": "6054eb89bc06ebe2",
       "source": "wiki/INDEX.md",
       "target": "wiki/plans/INDEX.md",
+      "type": "link",
       "relation": "link"
     },
     {
       "id": "66da6ac88fc06447",
       "source": "wiki/journal/2026-08-23-plan-topic-integrity.md",
       "target": "wiki/plans/2026-08-23-add-focused-cjs-unit-tests-6569724de4.md",
+      "type": "plan",
       "relation": "plan"
     },
     {
       "id": "6cd50786487de769",
       "source": "wiki/journal/2026-08-23-ai-pr-and-ai-commit-bootstrap.md",
       "target": "wiki/topics/repository-automation.md",
+      "type": "topic",
       "relation": "topic"
     },
     {
       "id": "6e1943599b81c590",
       "source": "wiki/plans/2026-08-20-global-wiki-skill-and-repository-bootstrap-f45de79a63.md",
       "target": "wiki/topics/wiki-system.md",
+      "type": "topic",
+      "relation": "topic"
+    },
+    {
+      "id": "6e7db19d5b8d570d",
+      "source": "wiki/journal/2026-08-23-promote-canonical-wiki-parity.md",
+      "target": "wiki/topics/graph-viewer.md",
+      "type": "topic",
       "relation": "topic"
     },
     {
       "id": "722d993acefcaef5",
       "source": "wiki/plans/INDEX.md",
       "target": "wiki/plans/2026-08-23-self-host-the-wiki-with-standalone-claude-import-compatibility-37a2441a28.md",
+      "type": "link",
       "relation": "link"
     },
     {
       "id": "7f2273994c0e9a5f",
       "source": "wiki/topics/script-testing.md",
       "target": "wiki/plans/2026-08-23-add-focused-cjs-unit-tests-6569724de4.md",
+      "type": "link",
       "relation": "link"
+    },
+    {
+      "id": "80e8f6636944c6f6",
+      "source": "wiki/journal/2026-08-23-promote-canonical-wiki-parity.md",
+      "target": "wiki/topics/installer-contract.md",
+      "type": "topic",
+      "relation": "topic"
     },
     {
       "id": "8a122b9d527fc13c",
       "source": "wiki/journal/2026-08-23-wiki-bootstrap-and-claude-import.md",
       "target": "wiki/topics/installer-contract.md",
+      "type": "topic",
       "relation": "topic"
     },
     {
       "id": "9142df0d0f2aa507",
       "source": "wiki/topics/wiki-system.md",
       "target": "wiki/plans/2026-08-20-global-wiki-skill-and-repository-bootstrap-f45de79a63.md",
+      "type": "link",
       "relation": "link"
     },
     {
       "id": "9230d138299f6c30",
       "source": "wiki/journal/2026-08-23-plan-topic-integrity.md",
       "target": "wiki/topics/script-testing.md",
+      "type": "link",
       "relation": "link"
     },
     {
       "id": "9fc5fd7afe1c2605",
       "source": "wiki/journal/2026-08-23-plan-topic-integrity.md",
       "target": "wiki/topics/script-testing.md",
+      "type": "topic",
+      "relation": "topic"
+    },
+    {
+      "id": "a2b6ec55a1cbdcad",
+      "source": "wiki/plans/2026-08-23-promote-canonical-wiki-parity-369416673b.md",
+      "target": "wiki/topics/wiki-navigation-and-automation.md",
+      "type": "topic",
       "relation": "topic"
     },
     {
       "id": "ab0fa3aa04d954f8",
       "source": "wiki/journal/2026-08-23-wiki-bootstrap-and-claude-import.md",
       "target": "wiki/topics/installer-contract.md",
+      "type": "link",
       "relation": "link"
     },
     {
       "id": "b40aeda7a1e0e956",
       "source": "wiki/plans/INDEX.md",
       "target": "wiki/plans/2026-08-23-create-tracking-issue-and-implementation-branch-aa427de2df.md",
+      "type": "link",
       "relation": "link"
     },
     {
       "id": "b7b8001f9572be63",
       "source": "wiki/plans/INDEX.md",
       "target": "wiki/plans/2026-08-20-global-wiki-skill-and-repository-bootstrap-f45de79a63.md",
+      "type": "link",
       "relation": "link"
     },
     {
       "id": "b9cdb8b31c299f3e",
       "source": "wiki/plans/2026-08-23-self-host-the-wiki-with-standalone-claude-import-compatibility-37a2441a28.md",
       "target": "wiki/topics/installer-contract.md",
+      "type": "topic",
       "relation": "topic"
+    },
+    {
+      "id": "be736fc40f6a1252",
+      "source": "wiki/plans/INDEX.md",
+      "target": "wiki/plans/2026-08-23-promote-canonical-wiki-parity-369416673b.md",
+      "type": "link",
+      "relation": "link"
     },
     {
       "id": "c40219290aba0aab",
       "source": "wiki/topics/wiki-system.md",
       "target": "wiki/topics/graph-viewer.md",
+      "type": "link",
       "relation": "link"
     },
     {
       "id": "c72f229aa9b26889",
       "source": "wiki/topics/graph-viewer.md",
       "target": "wiki/topics/wiki-system.md",
+      "type": "link",
       "relation": "link"
     },
     {
       "id": "cfb02eb5135a53d3",
       "source": "wiki/journal/2026-08-23-wiki-bootstrap-and-claude-import.md",
       "target": "wiki/plans/2026-08-23-self-host-the-wiki-with-standalone-claude-import-compatibility-37a2441a28.md",
+      "type": "plan",
       "relation": "plan"
     },
     {
       "id": "d214f2e19627d7e8",
       "source": "wiki/topics/wiki-system.md",
       "target": "wiki/topics/installer-contract.md",
+      "type": "link",
       "relation": "link"
     },
     {
       "id": "d3a97dc361b3299d",
       "source": "wiki/journal/2026-08-23-plan-topic-integrity.md",
       "target": "wiki/topics/wiki-system.md",
+      "type": "link",
       "relation": "link"
     },
     {
       "id": "d5cd2878cbf489a7",
       "source": "wiki/journal/2026-08-23-plan-topic-integrity.md",
       "target": "wiki/plans/2026-08-20-global-wiki-skill-and-repository-bootstrap-f45de79a63.md",
+      "type": "plan",
       "relation": "plan"
     },
     {
       "id": "db5b8f6d2dea65ca",
       "source": "wiki/plans/2026-08-23-add-focused-cjs-unit-tests-6569724de4.md",
       "target": "wiki/topics/script-testing.md",
+      "type": "topic",
       "relation": "topic"
     },
     {
       "id": "e156d04ea907b58c",
       "source": "wiki/topics/wiki-system.md",
       "target": "wiki/plans/2026-08-23-self-host-the-wiki-with-standalone-claude-import-compatibility-37a2441a28.md",
+      "type": "link",
       "relation": "link"
     },
     {
       "id": "e56d58329e2a8982",
       "source": "wiki/MECHANICS.md",
       "target": "wiki/plans/INDEX.md",
+      "type": "link",
       "relation": "link"
+    },
+    {
+      "id": "eddc7f50c1cfb162",
+      "source": "wiki/journal/2026-08-23-promote-canonical-wiki-parity.md",
+      "target": "wiki/plans/2026-08-23-promote-canonical-wiki-parity-369416673b.md",
+      "type": "plan",
+      "relation": "plan"
     },
     {
       "id": "eeda0ea7b6dc4d16",
       "source": "wiki/journal/2026-08-23-ai-pr-and-ai-commit-bootstrap.md",
       "target": "wiki/topics/installer-contract.md",
+      "type": "topic",
       "relation": "topic"
     },
     {
       "id": "f097a2aa995f54c3",
       "source": "wiki/journal/2026-08-23-wiki-bootstrap-and-claude-import.md",
       "target": "wiki/plans/2026-08-23-self-host-the-wiki-with-standalone-claude-import-compatibility-37a2441a28.md",
+      "type": "link",
       "relation": "link"
     },
     {
       "id": "f238e14e16f37dfa",
       "source": "wiki/journal/2026-08-23-plan-topic-integrity.md",
       "target": "wiki/topics/wiki-system.md",
+      "type": "topic",
       "relation": "topic"
     },
     {
       "id": "faafe85ffa17bc29",
       "source": "wiki/topics/script-testing.md",
       "target": "wiki/plans/2026-08-23-create-tracking-issue-and-implementation-branch-aa427de2df.md",
+      "type": "link",
       "relation": "link"
     }
   ]

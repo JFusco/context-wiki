@@ -2,55 +2,83 @@ name: Sync wiki issue state
 
 on:
   schedule:
-    - cron: "17 8 * * *"
-  workflow_dispatch:
+    - cron: "30 11 * * *" # Daily at 11:30 UTC
+  workflow_dispatch: {}
 
 permissions:
   contents: read
   pull-requests: read
-
-env:
-  GRAPHIFY_SKIP_HOOK: "1"
+  issues: read
 
 concurrency:
   group: wiki-issue-sync
   cancel-in-progress: false
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  GRAPHIFY_SKIP_HOOK: "1"
+
 jobs:
-  refresh:
+  sync:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.PR_BOT_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24.14.0"
+      - name: Enable declared pnpm via Corepack
+        run: corepack enable && corepack install
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Require bot token
         run: |
           test -n "$GH_TOKEN" || { echo 'PR_BOT_TOKEN is required'; exit 1; }
           gh auth setup-git
-      - name: Refresh cited issues and open review PR
+      - name: Refresh cited issues
+        id: refresh
         run: |
           base="$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')"
           git checkout -B "$base" "origin/$base"
           node scripts/wiki/refresh-issue-state.cjs
           node scripts/wiki/build-graph.cjs
           node scripts/wiki/check.cjs
-          if [ -z "$(git status --porcelain -- wiki scripts/wiki/graph/data/graph.json)" ]; then echo 'No issue-state changes'; exit 0; fi
+          if [ -z "$(git status --porcelain -- wiki scripts/wiki/graph/data/graph.json)" ]; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           branch='bot/wiki-issue-sync'
-          git config user.name 'wiki-bot'
-          git config user.email 'wiki-bot@users.noreply.github.com'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git checkout -B "$branch"
           git add wiki scripts/wiki/graph/data/graph.json
           git commit -m 'docs(wiki): refresh cited issue state'
-          git push --force-with-lease origin "$branch"
-          existing="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number')"
-          if [ -n "$existing" ]; then
-            gh pr edit "$existing" --title 'docs(wiki): refresh cited issue state' --body 'Automated, reviewable refresh of cited GitHub issue state.'
+          git fetch origin "refs/heads/$branch:refs/remotes/origin/$branch" || true
+          git push --force-with-lease origin "HEAD:refs/heads/$branch"
+          echo 'changed=true' >> "$GITHUB_OUTPUT"
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+      - name: Open, update, or reopen review PR
+        if: steps.refresh.outputs.changed == 'true'
+        env:
+          BASE_BRANCH: ${{ steps.refresh.outputs.base }}
+          BRANCH: ${{ steps.refresh.outputs.branch }}
+        run: |
+          title='docs(wiki): refresh cited issue state'
+          body='Automated, reviewable refresh of cited GitHub issue state.'
+          open="$(gh pr list --head "$BRANCH" --state open --limit 100 --json number --jq 'sort_by(.number) | last | .number // empty')"
+          closed="$(gh pr list --head "$BRANCH" --state closed --limit 100 --json number,mergedAt --jq 'map(select(.mergedAt == null)) | sort_by(.number) | last | .number // empty')"
+          if [ -n "$open" ]; then
+            gh pr edit "$open" --title "$title" --body "$body"
+          elif [ -n "$closed" ]; then
+            gh pr reopen "$closed"
+            gh pr edit "$closed" --title "$title" --body "$body"
           else
-            gh pr create --base "$base" --head "$branch" --title 'docs(wiki): refresh cited issue state' --body 'Automated, reviewable refresh of cited GitHub issue state.'
+            gh pr create --base "$BASE_BRANCH" --head "$BRANCH" --title "$title" --body "$body"
           fi

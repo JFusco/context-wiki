@@ -25,10 +25,11 @@ function resolveRequest(root, requestUrl) {
   }
 }
 
-function createServer(root) {
+function createServer(root, policyFile = path.join(path.dirname(root), "routing-policy.json")) {
   return http.createServer((req, res) => {
     try {
-      const file = resolveRequest(root, req.url);
+      const pathname = new URL(req.url, "http://127.0.0.1").pathname;
+      const file = pathname === "/routing-policy.json" && fs.existsSync(policyFile) ? policyFile : resolveRequest(root, req.url);
       if (!file) throw new Error("not found");
       res.writeHead(200, {
         "Content-Type": types[path.extname(file)] || "application/octet-stream",

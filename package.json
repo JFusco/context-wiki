@@ -12,9 +12,12 @@
     "test": "node scripts/test.cjs",
     "test:unit": "node scripts/unit.test.cjs",
     "validate": "node scripts/validate-install.cjs && node scripts/test.cjs && node scripts/wiki/check.cjs",
+    "verify:push": "pnpm run validate",
+    "verify:ci": "pnpm run test:unit && pnpm run validate",
     "graph:build": "node scripts/wiki/build-graph.cjs",
     "graph:view": "node scripts/wiki/serve-graph.cjs",
     "wiki:check": "node scripts/wiki/check.cjs",
+    "lint:commit": "commitlint",
     "prepare": "husky",
     "commit": "ai-commit run",
     "pr:create": "ai-pr"

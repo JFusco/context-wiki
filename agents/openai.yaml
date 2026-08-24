@@ -1,6 +1,6 @@
 interface:
   display_name: "Wiki"
-  short_description: "Initialize and maintain repository context wikis"
-  default_prompt: "Use $wiki to initialize or reconcile the context wiki in this repository."
+  short_description: "Navigate and standardize repository context wikis"
+  default_prompt: "Use $wiki to navigate or reconcile this repository's context wiki with the token-efficient graph route."
 policy:
   allow_implicit_invocation: true

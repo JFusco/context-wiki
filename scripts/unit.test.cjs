@@ -14,6 +14,8 @@ const common = require(path.join(WIKI_SCRIPTS, "lib", "common.cjs"));
 const dates = require(path.join(WIKI_SCRIPTS, "lib", "dates.cjs"));
 const frontmatter = require(path.join(WIKI_SCRIPTS, "lib", "frontmatter.cjs"));
 const plans = require(path.join(WIKI_SCRIPTS, "lib", "plans.cjs"));
+const github = require(path.join(WIKI_SCRIPTS, "lib", "github-refs.cjs"));
+const routing = require(path.join(WIKI_SCRIPTS, "routing.cjs"));
 const installer = require(path.join(SKILL, "scripts", "init-repository.cjs"));
 
 function temp(t, name) {
@@ -242,10 +244,96 @@ test("plans collapses normalized titles to the latest and then longest revision"
   assert.ok(collapsed.includes(selected));
 });
 
+test("GitHub evidence is full-URL-only, repo-qualified, and deterministic", () => {
+  const text = [
+    "PR #7",
+    "https://github.com/Example/Alpha/issues/7",
+    "https://github.com/example/alpha/issues/7",
+    "https://github.com/Example/Beta/pull/7",
+    "https://evil.example/github.com/example/alpha/issues/99",
+    "https://evil.example/?next=https://github.com/example/alpha/issues/100",
+    "```md",
+    "https://github.com/example/fenced/issues/101",
+    "```",
+  ].join("\n");
+  assert.deepEqual(github.githubRefs(text, { repository: "Owner/Current" }), [
+    { repository: "example/alpha", kind: "issue", number: 7, url: "https://github.com/example/alpha/issues/7" },
+    { repository: "example/beta", kind: "pull-request", number: 7, url: "https://github.com/example/beta/pull/7" },
+    { repository: "owner/current", kind: "pull-request", number: 7, url: "https://github.com/owner/current/pull/7" },
+  ]);
+  assert.deepEqual(github.githubRefs("issue #9"), []);
+  assert.deepEqual(github.closingIssues([
+    "Fixes #2, Other/Repo#2, and https://github.com/Third/Repo/issues/3.",
+    "Resolves #8 & Other/Repo#9.",
+    "Mentions https://github.com/ignored/repo/issues/4.",
+    "```",
+    "Fixes https://github.com/fenced/repo/issues/5.",
+    "```",
+    "~~~md",
+    "Fixes https://github.com/fenced/repo/issues/6.",
+    "~~~",
+    "````md",
+    "```",
+    "Fixes https://github.com/fenced/repo/issues/7.",
+    "```js",
+    "````",
+  ].join("\n"), "Owner/Current").map((item) => item.url), [
+    "https://github.com/owner/current/issues/2",
+    "https://github.com/other/repo/issues/2",
+    "https://github.com/third/repo/issues/3",
+    "https://github.com/owner/current/issues/8",
+    "https://github.com/other/repo/issues/9",
+  ]);
+  assert.equal(github.normalizeRepository("https://github.com/Owner/Repo.git"), "owner/repo");
+  assert.equal(github.ref("owner/repo", "issue", "9007199254740993"), null);
+  assert.equal(github.normalizeGithubQuery("https://github.com/owner/repo/issues/9007199254740993?x=1"), "https://github.com/owner/repo/issues/9007199254740993?x=1");
+  assert.equal(github.withoutFencedCode("````md\n```\ninside\n```js\n````\noutside"), "outside");
+});
+
+test("weighted routing is deterministic, byte-aware, and returns compact candidates", () => {
+  const graph = {
+    nodes: [
+      { id: "wiki/a.md", label: "Start", type: "journal", aliases: [], bytes: 100, degree: 2 },
+      { id: "wiki/b.md", label: "Small route", type: "topic", aliases: ["middle"], githubRefs: [{ repository: "example/repo", kind: "issue", number: 7, url: "https://github.com/example/repo/issues/7" }], bytes: 100, degree: 2 },
+      { id: "wiki/e.md", label: "Evidence journal", type: "journal", aliases: [], githubRefs: [{ repository: "example/repo", kind: "issue", number: 7, url: "https://github.com/example/repo/issues/7" }], bytes: 80, degree: 0 },
+      { id: "wiki/c.md", label: "Target", type: "plan", aliases: [], bytes: 200, degree: 2 },
+      { id: "wiki/d.md", label: "Target", type: "plan", aliases: [], bytes: 20000, degree: 2 },
+    ],
+    edges: [
+      { source: "wiki/a.md", target: "wiki/b.md", type: "topic" },
+      { source: "wiki/b.md", target: "wiki/c.md", type: "plan" },
+      { source: "wiki/a.md", target: "wiki/d.md", type: "link" },
+      { source: "wiki/d.md", target: "wiki/c.md", type: "link" },
+    ],
+  };
+  const result = routing.route(graph, { intent: "wiring", from: "wiki/a.md", to: "wiki/c.md", maxBytes: 250 });
+  assert.equal(result.status, "ok");
+  assert.deepEqual(result.itinerary.map((item) => item.id), ["wiki/a.md", "wiki/b.md", "wiki/c.md"]);
+  assert.equal(result.totalBytes, 400);
+  assert.equal(result.overBudget, true);
+  assert.equal(result.routeAuthority, "wiki/a.md → wiki/c.md");
+  assert.ok(result.itinerary.every((item) => item.authority && item.authority !== item.type));
+  assert.match(routing.formatRoute(result), /3 file\(s\).*400 B.*exceeds 250 B[\s\S]*Authority: wiki\/a\.md → wiki\/c\.md[\s\S]*query match[\s\S]*source: wiki\/a\.md[\s\S]*Total bytes: 400 B/);
+  assert.equal(routing.resolveNode(graph, "middle").node.id, "wiki/b.md");
+  assert.equal(routing.resolveNode(graph, "example/repo issue #7").node.id, "wiki/e.md");
+  assert.equal(routing.resolveNode(graph, "https://github.com/example/repo/issues/7?x=1#note").node.id, "wiki/e.md");
+  const ambiguous = routing.resolveNode(graph, "Target");
+  assert.equal(ambiguous.node, null);
+  assert.deepEqual(ambiguous.candidates.map((item) => item.id), ["wiki/c.md", "wiki/d.md"]);
+  const loadedPolicy = routing.loadPolicy();
+  assert.deepEqual(routing.policyProblems({ ...loadedPolicy, excludedIntermediateTypes: "index" }, graph), ["excludedIntermediateTypes must be an array"]);
+  assert.deepEqual(routing.policyProblems({ ...loadedPolicy, excludedIntermediateTypes: [null] }, graph), ["excludedIntermediateTypes must contain non-empty strings"]);
+  assert.ok(routing.policyProblems({ ...loadedPolicy, intents: { ...loadedPolicy.intents, why: { ...loadedPolicy.intents.why, preferredSourceTypes: [null] } } }, graph).some((problem) => /non-empty string array/.test(problem)));
+  assert.ok(routing.policyProblems({ ...loadedPolicy, edgeCosts: { plan: 1 } }, graph).some((problem) => /missing edge cost/.test(problem)));
+});
+
 test("installer parses supported arguments and rejects unknown flags", () => {
-  assert.deepEqual(installer.parseArgs([]), { repo: process.cwd(), dryRun: false, github: "auto" });
-  assert.deepEqual(installer.parseArgs(["--repo", "/tmp/demo", "--dry-run", "--github"]), { repo: "/tmp/demo", dryRun: true, github: "on" });
+  assert.deepEqual(installer.parseArgs([]), { repo: process.cwd(), dryRun: false, github: "auto", wikiRoot: "wiki", headlessNavigation: false });
+  assert.deepEqual(installer.parseArgs(["--repo", "/tmp/demo", "--dry-run", "--github"]), { repo: "/tmp/demo", dryRun: true, github: "on", wikiRoot: "wiki", headlessNavigation: false });
   assert.equal(installer.parseArgs(["--no-github"]).github, "off");
+  assert.deepEqual(installer.parseArgs(["--headless-navigation", "--wiki-root", "docs/context"]), { repo: process.cwd(), dryRun: false, github: "auto", wikiRoot: "docs/context", headlessNavigation: true });
+  assert.equal(installer.normalizeWikiRoot("./docs/context/"), "docs/context");
+  assert.throws(() => installer.normalizeWikiRoot("../outside"), /safe repository-relative/);
   assert.equal(installer.parseArgs(["--help"]).help, true);
   assert.throws(() => installer.parseArgs(["--unknown"]), /unknown argument/);
 });
