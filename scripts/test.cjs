@@ -97,8 +97,9 @@ test("non-Git initialization is complete, valid, and idempotent", () => {
   }
   const agents = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8");
   assert.match(agents, /direct single-topic history or rationale/);
-  assert.match(agents, /Only for a cross-page question/);
-  assert.match(agents, /Never bulk-load `wiki\/` or `scripts\/wiki\/graph\/data\/graph\.json`/);
+  assert.match(agents, /Only for a cross-page why, wiring, ownership, or impact question/);
+  assert.match(agents, /Never bulk-load `wiki\/`/);
+  assert.match(agents, /Never read generated graph JSON directly/);
   assert.match(agents, /ask one focused question/);
   assert.ok(!fs.existsSync(path.join(root, ".github")));
   const before = fs.readFileSync(path.join(root, "wiki/.wiki-kit.json"), "utf8");
@@ -147,7 +148,7 @@ test("headless custom-root install adds navigation without replacing repository 
   assert.match(agents, /--wiki-root "docs\/context" --intent why/);
   assert.match(agents, /navigation only/);
   assert.match(agents, /direct single-topic history or rationale/);
-  assert.match(agents, /Only for a cross-page question/);
+  assert.match(agents, /Only for a cross-page why, wiring, ownership, or impact question/);
   assert.match(agents, /generated graph JSON/);
   assert.match(agents, /ask one focused question/);
   const route = node(path.join(root, "scripts/wiki/navigate.cjs"), ["--wiki-root", "docs/context", "--intent", "wiring", "--from", "docs/context/INDEX.md", "--to", "docs/context/decision.md"], { cwd: root });
@@ -157,6 +158,50 @@ test("headless custom-root install adds navigation without replacing repository 
   assert.equal(init(root, ["--headless-navigation", "--wiki-root", "docs/context", "--dry-run"]).status, 0);
   assert.equal(init(root, ["--headless-navigation", "--wiki-root", "../escape"]).status, 2);
   assert.equal(init(root, ["--wiki-root", "docs/context"]).status, 2);
+});
+
+test("agents-only updates only the managed AGENTS block with deterministic dry-run codes", () => {
+  const root = makeGit("agents-only", "https://github.com/example/agents-only.git");
+  const agents = path.join(root, "AGENTS.md");
+  const claude = path.join(root, "CLAUDE.md");
+  const ownedScript = path.join(root, "scripts", "wiki", "owned.cjs");
+  write(path.join(root, "wiki/INDEX.md"), "# Existing wiki\n");
+  write(agents, "# Repository guidance\n");
+  write(claude, "# Authored Claude shim\n\n@AGENTS.md\n");
+  write(ownedScript, "module.exports = {};\n");
+  const beforeClaude = fs.readFileSync(claude);
+  const beforeScript = fs.readFileSync(ownedScript);
+
+  const drift = init(root, ["--agents-only", "--headless-navigation", "--dry-run"]);
+  assert.equal(drift.status, 1, drift.stderr);
+  assert.equal(fs.readFileSync(agents, "utf8"), "# Repository guidance\n");
+
+  const install = init(root, ["--agents-only", "--headless-navigation"]);
+  assert.equal(install.status, 0, install.stderr);
+  assert.match(install.stderr, /preserved assets, hooks, workflows, graphs, and CLAUDE\.md/);
+  assert.match(fs.readFileSync(agents, "utf8"), /deterministic weighted shortest route/);
+  assert.deepEqual(fs.readFileSync(claude), beforeClaude);
+  assert.deepEqual(fs.readFileSync(ownedScript), beforeScript);
+  for (const relative of ["wiki/.wiki-kit.json", "scripts/wiki/.navigation-kit.json", ".github/workflows/wiki-check.yml", ".githooks/pre-commit"]) {
+    assert.equal(fs.existsSync(path.join(root, relative)), false, relative);
+  }
+  assert.equal(init(root, ["--agents-only", "--headless-navigation", "--dry-run"]).status, 0);
+  assert.equal(init(root, ["--agents-only", "--github"]).status, 2);
+
+  const customRoot = makeGit("agents-only-custom-root");
+  write(path.join(customRoot, "wiki/site/INDEX.md"), "# Existing site wiki\n");
+  assert.equal(init(customRoot, ["--agents-only", "--headless-navigation", "--wiki-root", "wiki/site"]).status, 0);
+  const customAgents = fs.readFileSync(path.join(customRoot, "AGENTS.md"), "utf8");
+  assert.match(customAgents, /--wiki-root "wiki\/site" --intent why/);
+  assert.equal(fs.existsSync(path.join(customRoot, "CLAUDE.md")), false);
+  assert.equal(init(customRoot, ["--agents-only", "--headless-navigation", "--wiki-root", "wiki/site", "--dry-run"]).status, 0);
+
+  write(agents, "<!-- wiki-skill:start -->\nbroken\n");
+  const malformedBefore = fs.readFileSync(agents);
+  const malformed = init(root, ["--agents-only", "--headless-navigation"]);
+  assert.equal(malformed.status, 2);
+  assert.match(malformed.stderr, /malformed or duplicate managed markers/);
+  assert.deepEqual(fs.readFileSync(agents), malformedBefore);
 });
 
 test("dry-run reports drift without writes and installer refuses symbolic-link escapes", () => {

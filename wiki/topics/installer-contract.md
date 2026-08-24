@@ -27,6 +27,10 @@ Other safe repository-local hook paths retain their existing direct-update behav
 
 The context-wiki repository uses its worktree-local installer when validating installer changes against itself. A separate canonical skill checkout is never modified as a side effect of repository initialization.
 
+## Decisions
+
+- 2026-08-24 — Added `--agents-only` as a strict managed-block boundary: it validates markers and reconciles only `AGENTS.md`, leaving assets, hooks, workflows, graphs, and `CLAUDE.md` untouched ([plan](../plans/2026-08-24-deterministic-route-first-wiki-guidance-and-pr-127-recovery-9f56bf461c.md), [journal](../journal/2026-08-24-deterministic-route-first-agent-guidance.md)).
+
 ## Global discovery links
 
 The persistent checkout may live outside `~/.agents/skills/wiki` and be exposed through a symbolic link. Global validation compares resolved targets, so the Codex/agent and Claude discovery entries may both point at `/Users/joe.fusco/Projects/context-wiki` without copying the skill or retaining the checkout's former folder name.
