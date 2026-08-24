@@ -264,6 +264,7 @@ test("GitHub evidence is full-URL-only, repo-qualified, and deterministic", () =
   assert.deepEqual(github.githubRefs("issue #9"), []);
   assert.deepEqual(github.closingIssues([
     "Fixes #2, Other/Repo#2, and https://github.com/Third/Repo/issues/3.",
+    "Resolves #8 & Other/Repo#9.",
     "Mentions https://github.com/ignored/repo/issues/4.",
     "```",
     "Fixes https://github.com/fenced/repo/issues/5.",
@@ -271,12 +272,22 @@ test("GitHub evidence is full-URL-only, repo-qualified, and deterministic", () =
     "~~~md",
     "Fixes https://github.com/fenced/repo/issues/6.",
     "~~~",
+    "````md",
+    "```",
+    "Fixes https://github.com/fenced/repo/issues/7.",
+    "```js",
+    "````",
   ].join("\n"), "Owner/Current").map((item) => item.url), [
     "https://github.com/owner/current/issues/2",
     "https://github.com/other/repo/issues/2",
     "https://github.com/third/repo/issues/3",
+    "https://github.com/owner/current/issues/8",
+    "https://github.com/other/repo/issues/9",
   ]);
   assert.equal(github.normalizeRepository("https://github.com/Owner/Repo.git"), "owner/repo");
+  assert.equal(github.ref("owner/repo", "issue", "9007199254740993"), null);
+  assert.equal(github.normalizeGithubQuery("https://github.com/owner/repo/issues/9007199254740993?x=1"), "https://github.com/owner/repo/issues/9007199254740993?x=1");
+  assert.equal(github.withoutFencedCode("````md\n```\ninside\n```js\n````\noutside"), "outside");
 });
 
 test("weighted routing is deterministic, byte-aware, and returns compact candidates", () => {
@@ -284,6 +295,7 @@ test("weighted routing is deterministic, byte-aware, and returns compact candida
     nodes: [
       { id: "wiki/a.md", label: "Start", type: "journal", aliases: [], bytes: 100, degree: 2 },
       { id: "wiki/b.md", label: "Small route", type: "topic", aliases: ["middle"], githubRefs: [{ repository: "example/repo", kind: "issue", number: 7, url: "https://github.com/example/repo/issues/7" }], bytes: 100, degree: 2 },
+      { id: "wiki/e.md", label: "Evidence journal", type: "journal", aliases: [], githubRefs: [{ repository: "example/repo", kind: "issue", number: 7, url: "https://github.com/example/repo/issues/7" }], bytes: 80, degree: 0 },
       { id: "wiki/c.md", label: "Target", type: "plan", aliases: [], bytes: 200, degree: 2 },
       { id: "wiki/d.md", label: "Target", type: "plan", aliases: [], bytes: 20000, degree: 2 },
     ],
@@ -302,10 +314,17 @@ test("weighted routing is deterministic, byte-aware, and returns compact candida
   assert.equal(result.routeAuthority, "wiki/a.md → wiki/c.md");
   assert.ok(result.itinerary.every((item) => item.authority && item.authority !== item.type));
   assert.match(routing.formatRoute(result), /3 file\(s\).*400 B.*exceeds 250 B[\s\S]*Authority: wiki\/a\.md → wiki\/c\.md[\s\S]*query match[\s\S]*source: wiki\/a\.md[\s\S]*Total bytes: 400 B/);
-  assert.equal(routing.resolveNode(graph, "example/repo issue #7").node.id, "wiki/b.md");
+  assert.equal(routing.resolveNode(graph, "middle").node.id, "wiki/b.md");
+  assert.equal(routing.resolveNode(graph, "example/repo issue #7").node.id, "wiki/e.md");
+  assert.equal(routing.resolveNode(graph, "https://github.com/example/repo/issues/7?x=1#note").node.id, "wiki/e.md");
   const ambiguous = routing.resolveNode(graph, "Target");
   assert.equal(ambiguous.node, null);
   assert.deepEqual(ambiguous.candidates.map((item) => item.id), ["wiki/c.md", "wiki/d.md"]);
+  const loadedPolicy = routing.loadPolicy();
+  assert.deepEqual(routing.policyProblems({ ...loadedPolicy, excludedIntermediateTypes: "index" }, graph), ["excludedIntermediateTypes must be an array"]);
+  assert.deepEqual(routing.policyProblems({ ...loadedPolicy, excludedIntermediateTypes: [null] }, graph), ["excludedIntermediateTypes must contain non-empty strings"]);
+  assert.ok(routing.policyProblems({ ...loadedPolicy, intents: { ...loadedPolicy.intents, why: { ...loadedPolicy.intents.why, preferredSourceTypes: [null] } } }, graph).some((problem) => /non-empty string array/.test(problem)));
+  assert.ok(routing.policyProblems({ ...loadedPolicy, edgeCosts: { plan: 1 } }, graph).some((problem) => /missing edge cost/.test(problem)));
 });
 
 test("installer parses supported arguments and rejects unknown flags", () => {

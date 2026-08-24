@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { walk, slash, digest, ensureInside, remoteSlug } = require("./common.cjs");
 const { splitFrontmatter, list, titleFromBody } = require("./frontmatter.cjs");
-const { githubRefs } = require("./github-refs.cjs");
+const { githubRefs, withoutFencedCode } = require("./github-refs.cjs");
 
 function normalizeWikiRoot(value = "wiki") {
   const normalized = slash(path.normalize(String(value || "wiki"))).replace(/^\.\//, "").replace(/\/$/, "");
@@ -112,7 +112,7 @@ function collect(root, { wikiRoot = "wiki" } = {}) {
     const text = textFor.get(file);
     const parsed = splitFrontmatter(text);
     const sourceId = idFor.get(path.resolve(file));
-    for (const match of parsed.body.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
+    for (const match of withoutFencedCode(parsed.body).matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
       const target = resolveWikiLink(root, wikiRootRelative, file, match[1]);
       if (target) add(sourceId, target, "link");
     }

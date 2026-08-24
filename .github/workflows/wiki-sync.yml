@@ -47,8 +47,8 @@ jobs:
           base_ref="$(jq -r '.base.ref' <<<"$pr")"
           files="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files?per_page=100" --paginate --slurp | jq -c '[.[][] | .filename]')"
           commits="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/commits?per_page=100" --paginate --slurp | jq -c '[.[][] | {hash: .sha, subject: (.commit.message | split("\n")[0])}]')"
-          jq -n --argjson pr "$pr" --argjson files "$files" --argjson commits "$commits" \
-            '{number: $pr.number, title: $pr.title, body: ($pr.body // ""), url: $pr.html_url, merged_at: $pr.merged_at, files: $files, commits: $commits}' \
+          jq -n --arg repository "$GITHUB_REPOSITORY" --argjson pr "$pr" --argjson files "$files" --argjson commits "$commits" \
+            '{schemaVersion: 1, repository: $repository, number: $pr.number, title: $pr.title, body: ($pr.body // ""), url: $pr.html_url, mergedAt: $pr.merged_at, changedPaths: $files, commits: $commits}' \
             > "$RUNNER_TEMP/wiki-merge.json"
           echo "base_branch=$base_ref" >> "$GITHUB_OUTPUT"
       - name: Checkout merged base

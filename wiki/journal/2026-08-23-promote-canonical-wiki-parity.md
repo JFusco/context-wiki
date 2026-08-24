@@ -21,6 +21,8 @@ Portable wiki consumers had drifted in graph navigation, Git hook behavior, and 
 - Standardized the source repository on exact `@verndale/ai-commit@2.7.0` as its sole Commitlint provider, canonical commitlint/quality workflows, and a verified narrow pnpm hoist; retained its existing pinned PR helper and excluded `bot/wiki-**` from the generic PR workflow.
 - Expanded installer, parser, router, viewer, workflow, hook, and clean-install regression coverage.
 - Tightened shared GitHub evidence to canonical `pull-request` / `issue` kinds, excluded fenced citations, made citation search route-aware, preserved every closing-keyword issue in existing journals, made issue refresh fence-aware, and exposed route authority and byte cost explicitly in CLI/browser itineraries.
+- Post-rollout review standardized the merge writer on `{schemaVersion: 1, repository, mergedAt, changedPaths}`, validated canonical/legacy commit records and wiki-owned journal paths, made exact evidence choose journal→topic→plan→index, and normalized pasted GitHub URL suffixes in CLI and browser.
+- Length-aware fences, safe numeric IDs, hostile-URL boundaries, symlink-root rejection, and strict browser/Node routing-policy parity now keep parsing, refresh, graph links, and byte-aware itineraries on the same deterministic contract.
 
 ## Evidence
 

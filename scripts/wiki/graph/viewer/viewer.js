@@ -297,7 +297,7 @@
 
   function wireControls() {
     $("#search").addEventListener("input", (event) => {
-      state.query = event.target.value.trim().toLowerCase();
+      state.query = window.WikiRouting.normalizeGithubQuery(event.target.value);
       applyView();
     });
     $("#reset").addEventListener("click", resetView);

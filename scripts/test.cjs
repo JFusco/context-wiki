@@ -50,7 +50,9 @@ test("package manifest exposes the Sigma graph workflow", () => {
   for (const relative of [".env.example", ".github/workflows/quality.yml", ".github/workflows/commitlint.yml", ".husky/commit-msg", ".husky/prepare-commit-msg"]) {
     assert.ok(fs.existsSync(path.join(SKILL, relative)), relative);
   }
-  assert.match(fs.readFileSync(path.join(SKILL, ".github/workflows/pr.yml"), "utf8"), /- bot\/wiki-\*\*/);
+  const prWorkflow = fs.readFileSync(path.join(SKILL, ".github/workflows/pr.yml"), "utf8");
+  assert.match(prWorkflow, /- bot\/wiki-\*\*/);
+  assert.match(prWorkflow, /if: \$\{\{ !startsWith\(github\.ref_name, 'bot\/wiki-'\) \}\}/);
   const quality = fs.readFileSync(path.join(SKILL, ".github/workflows/quality.yml"), "utf8");
   assert.match(quality, /fetch-depth: 0/);
   assert.match(quality, /run: pnpm run verify:ci/);
@@ -222,6 +224,9 @@ test("Git initialization installs workflows and dispatches a legacy hook", () =>
   assert.match(sync, /workflow_dispatch:\n    inputs:\n      pr_number:/);
   assert.match(sync, /files\?per_page=100.*--paginate --slurp/);
   assert.match(sync, /commits\?per_page=100.*--paginate --slurp/);
+  assert.match(sync, /--arg repository "\$GITHUB_REPOSITORY"/);
+  assert.match(sync, /\{schemaVersion: 1, repository: \$repository,[^\n]+mergedAt: \$pr\.merged_at, changedPaths: \$files, commits: \$commits\}/);
+  assert.doesNotMatch(sync, /\{[^\n]*merged_at: \$pr\.merged_at|\{[^\n]*files: \$files/);
   assert.match(sync, /branch="bot\/wiki-sync\/\$PR_NUMBER"/);
   assert.match(sync, /group: wiki-sync-\$\{\{ inputs\.pr_number \|\| github\.event\.pull_request\.number \}\}/);
   assert.match(sync, /PR_NUMBER: \$\{\{ inputs\.pr_number \|\| github\.event\.pull_request\.number \}\}/);
@@ -410,7 +415,11 @@ test("audit preflight is transactional and rejects forged digests and path-trave
 test("graph is wiki-only, byte-stable, typed, and rejects dangling relationships", () => {
   const root = temp("graph"); assert.equal(init(root).status, 0);
   write(path.join(root, "code.md"), "# Code must not be a node\n");
-  write(path.join(root, "wiki/topics/runtime.md"), "---\naliases: [execution engine]\n---\n\n# Runtime\n\nhttps://github.com/Example/One/issues/7 and https://github.com/Example/Two/pull/7. Ignore https://evil.example/github.com/example/one/issues/8.\n");
+  write(path.join(root, "wiki/topics/runtime.md"), [
+    "---", "aliases: [execution engine]", "---", "", "# Runtime", "",
+    "https://github.com/Example/One/issues/7 and https://github.com/Example/Two/pull/7. Ignore https://evil.example/github.com/example/one/issues/8.",
+    "", "````md", "```", "https://github.com/example/fenced/issues/9", "[missing](../topics/missing.md)", "```js", "````", "",
+  ].join("\n"));
   write(path.join(root, "wiki/journal/2026-01-01-runtime.md"), "---\ntopics: [runtime]\nplans: []\n---\n\n# Runtime journal\n\nSee [mechanics](../MECHANICS.md), the non-node [code](../../code.md), [local URI](file:///etc/passwd), and ![an image](../image.png).\n");
   const build = path.join(root, "scripts/wiki/build-graph.cjs");
   assert.equal(node(build, ["--repo", root], { cwd: root }).status, 0);
@@ -612,7 +621,7 @@ test("audit-plan-candidates infers plan dates from delivery evidence and sources
 test("merge and issue helpers are deterministic", () => {
   const root = makeGit("helpers", "git@github.com:example/repo.git"); assert.equal(init(root).status, 0);
   const { reconcile } = require(path.join(root, "scripts/wiki/on-merge-sync.cjs"));
-  const context = { number: 42, title: "Add runtime", body: "Mentions https://github.com/example/ignored/issues/99. Fixes #7. Resolves example/other#7. Closes https://github.com/example/third/issues/8.", url: "https://github.com/example/repo/pull/42", merged_at: "2026-01-02T00:00:00Z", files: ["src/runtime.js"], commits: [{ subject: "Add deterministic runtime" }] };
+  const context = { schemaVersion: 1, repository: "example/repo", number: 42, title: "Add runtime", body: "Mentions https://github.com/example/ignored/issues/99. Fixes #7. Resolves example/other#7. Closes https://github.com/example/third/issues/8.", url: "https://github.com/example/repo/pull/42", mergedAt: "2026-01-02T00:00:00Z", changedPaths: ["src/runtime.js"], commits: [{ hash: "abc123", subject: "Add deterministic runtime" }] };
   assert.equal(reconcile(context, root).length, 1); assert.equal(reconcile(context, root).length, 0);
   const { CLOSED_SUFFIX, issueRefs, markClosed, setIssueState } = require(path.join(root, "scripts/wiki/refresh-issue-state.cjs"));
   const issue = "https://github.com/example/repo/issues/7";
@@ -628,7 +637,25 @@ test("merge and issue helpers are deterministic", () => {
   assert.doesNotMatch(journal, /ignored\/issues\/99/);
   assert.match(journal, /Add deterministic runtime/);
   assert.equal(issueRefs("https://evil.example/github.com/example/repo/issues/8").length, 0);
-  assert.throws(() => reconcile({ ...context, number: "../../escape" }, root), /positive number/);
+  assert.throws(() => reconcile({ ...context, number: "../../escape" }, root), /positive/);
+  const escaped = path.join(root, ".github", "escaped.md");
+  write(escaped, "# Must stay unchanged\n");
+  assert.throws(() => reconcile({ ...context, changedPaths: ["wiki/journal/../../.github/escaped.md"] }, root), /normalized repository-relative/);
+  assert.equal(fs.readFileSync(escaped, "utf8"), "# Must stay unchanged\n");
+  assert.throws(() => reconcile({ ...context, url: "https://github.com/other/repo/pull/42" }, root), /URL must match/);
+  assert.throws(() => reconcile({ ...context, commits: [{ hash: 7, subject: "bad" }] }, root), /string hash and subject/);
+  assert.throws(() => reconcile({ ...context, title: 7 }, root), /title must be a string/);
+  assert.throws(() => reconcile({ ...context, body: [] }, root), /body must be a string/);
+  assert.throws(() => reconcile({ ...context, mergedAt: 1724400000 }, root), /parseable ISO date/);
+  assert.throws(() => reconcile({ ...context, mergedAt: "not-an-iso-date" }, root), /parseable ISO date/);
+  assert.throws(() => reconcile({ ...context, mergedAt: "2026" }, root), /parseable ISO date/);
+  const { url: _omittedUrl, ...withoutUrl } = context;
+  assert.throws(() => reconcile(withoutUrl, root), /URL must match/);
+  const linkedTarget = path.join(root, ".github", "linked-journal.md");
+  write(linkedTarget, "---\npr: pending\n---\n# Linked\n");
+  fs.symlinkSync(linkedTarget, path.join(root, "wiki", "journal", "linked.md"));
+  assert.throws(() => reconcile({ ...context, changedPaths: ["wiki/journal/linked.md"] }, root), /unsafe journal path/);
+  assert.match(fs.readFileSync(linkedTarget, "utf8"), /pr: pending/);
 });
 
 test("merge reconciliation adds every closing issue to an existing journal", () => {
@@ -654,18 +681,25 @@ test("issue refresh scopes Open threads, caches lookups, and owns only its trail
   const fenced = "https://github.com/example/fenced/issues/3";
   const first = path.join(topics, "first.md");
   const second = path.join(topics, "second.md");
+  const outside = path.join(temp("issue-refresh-outside"), "linked.md");
   write(first, [
     "# First", "", "## Decisions", "", `- [decision](${one})`, "", "## Open threads", "",
     "```md", "## Decisions", `- [fenced](${fenced})`, "```", "",
     `- [one](${one}) and [two](${two})`, `- [authored](${two}) — closed`, "",
   ].join("\n"));
   write(second, `# Second\n\n## Open threads\n\n- [duplicate](${one})\n`);
+  write(outside, `# Outside\n\n## Open threads\n\n- [linked](https://github.com/example/outside/issues/99)\n`);
+  fs.symlinkSync(outside, path.join(topics, "linked.md"));
   write(path.join(topics, "third.md"), [
     "# Third", "", "## Decisions", "", "~~~md", "## Open threads", `- [fenced heading](${fenced})`, "~~~", "", `- [still a decision](${fenced})`, "",
+  ].join("\n"));
+  write(path.join(topics, "long-fence.md"), [
+    "# Long fence", "", "## Open threads", "", "````md", "```", `- [nested](${fenced})`, "```js", "````", "",
   ].join("\n"));
   const calls = [];
   const closed = refresh(topics, (issue) => { calls.push(`${issue.repository}#${issue.number}`); return "closed"; });
   assert.deepEqual(calls, ["example/other#2", "example/repo#1"]);
+  assert.doesNotMatch(fs.readFileSync(outside, "utf8"), /wiki-issue-state/);
   assert.equal(closed.warnings.length, 0);
   const closedText = fs.readFileSync(first, "utf8");
   assert.match(closedText, new RegExp(`\\[one\\]\\(${one.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\) and \\[two\\]`));
@@ -680,6 +714,22 @@ test("issue refresh scopes Open threads, caches lookups, and owns only its trail
   assert.match(reopenedText, /\[authored\][^\n]+ — closed$/m);
   const failed = refresh(topics, (issue) => { if (issue.number === 1) throw new Error("offline"); return "closed"; });
   assert.equal(failed.warnings.length, 1);
+  const mixed = path.join(topics, "mixed.md");
+  const mixedBody = `# Mixed\n\n## Open threads\n\n- [open](https://github.com/example/mixed/issues/4) and [unknown](https://github.com/example/mixed/issues/5)${CLOSED_SUFFIX}\n`;
+  write(mixed, mixedBody);
+  const uncertain = refresh(topics, (issue) => {
+    if (issue.repository === "example/mixed" && issue.number === 4) return "open";
+    if (issue.repository === "example/mixed" && issue.number === 5) throw new Error("offline");
+    return "closed";
+  });
+  assert.ok(uncertain.warnings.some((warning) => /example\/mixed issue #5/.test(warning)));
+  assert.equal(fs.readFileSync(mixed, "utf8"), mixedBody);
+  const linkedRoot = temp("issue-refresh-linked-root");
+  const externalWiki = temp("issue-refresh-external-wiki");
+  write(path.join(externalWiki, "topics", "outside.md"), `# Outside\n\n## Open threads\n\n- [outside](${one})\n`);
+  fs.symlinkSync(externalWiki, path.join(linkedRoot, "wiki"), "dir");
+  assert.throws(() => refresh(path.join(linkedRoot, "wiki", "topics"), () => "closed", linkedRoot), /symbolic link/);
+  assert.doesNotMatch(fs.readFileSync(path.join(externalWiki, "topics", "outside.md"), "utf8"), /wiki-issue-state/);
 });
 
 test("pre-commit does not stage graph output derived from unstaged wiki content", () => {
@@ -808,9 +858,18 @@ test("Sigma viewer matches the reference shell, runs ForceAtlas2, and applies se
   vm.runInNewContext(routingSource, context);
   vm.runInNewContext(source, context);
   await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(window.WikiRouting.normalizeGithubQuery("https://github.com/example/repo/issues/9007199254740993?x=1"), "https://github.com/example/repo/issues/9007199254740993?x=1");
+  assert.equal(window.WikiRouting.validPolicy(policy, { nodes, edges }), true);
+  assert.equal(window.WikiRouting.validPolicy({ ...policy, excludedIntermediateTypes: "index" }, { nodes, edges }), false);
+  assert.equal(window.WikiRouting.validPolicy({ ...policy, excludedIntermediateTypes: [null] }, { nodes, edges }), false);
+  assert.equal(window.WikiRouting.validPolicy({ ...policy, edgeCosts: { plan: 1 } }, { nodes, edges }), false);
+  assert.equal(window.WikiRouting.shortestPath({ nodes, edges }, nodes[1].id, nodes[3].id, { ...policy, edgeCosts: { plan: 1 } }), null);
   assert.equal(renderer.graph.nodes.size, 4);
   assert.equal(circularCalls, 1);
   assert.equal(forceCalls, 1);
+  elements.search.listeners.input({ target: { value: "https://github.com/Example/Repo/issues/7?x=1#note" } });
+  assert.equal(renderer.settings.nodeReducer("wiki/topic-1.md", renderer.graph.nodes.get("wiki/topic-1.md")).label, "topic");
+  assert.equal(renderer.settings.nodeReducer("wiki/plan-3.md", renderer.graph.nodes.get("wiki/plan-3.md")).label, "");
   elements.search.listeners.input({ target: { value: "example/repo#7" } });
   assert.equal(renderer.settings.nodeReducer("wiki/topic-1.md", renderer.graph.nodes.get("wiki/topic-1.md")).label, "topic");
   assert.equal(renderer.settings.nodeReducer("wiki/plan-3.md", renderer.graph.nodes.get("wiki/plan-3.md")).label, "");

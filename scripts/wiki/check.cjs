@@ -23,6 +23,11 @@ function main() {
   for (const required of ["wiki/INDEX.md", "wiki/MECHANICS.md", "wiki/plans/INDEX.md", "scripts/wiki/graph/data/graph.json", "scripts/wiki/navigate.cjs", "scripts/wiki/routing.cjs", "scripts/wiki/routing-policy.json", "scripts/wiki/graph/viewer/routing.js"]) {
     if (!fs.existsSync(path.join(root, required))) errors.push(`missing ${required}`);
   }
+  const syncWorkflow = path.join(root, ".github", "workflows", "wiki-sync.yml");
+  if (fs.existsSync(syncWorkflow)) {
+    const source = fs.readFileSync(syncWorkflow, "utf8");
+    if (!source.includes('--arg repository "$GITHUB_REPOSITORY"') || !source.includes("{schemaVersion: 1, repository: $repository") || !source.includes("mergedAt: $pr.merged_at, changedPaths: $files")) errors.push("Sync context wiki does not emit the canonical versioned merge context");
+  }
   for (const file of walk(path.join(root, "wiki", "plans"), (item) => item.endsWith(".md") && path.basename(item) !== "INDEX.md")) {
     if (hasSymlinkComponent(root, file)) { errors.push(`${slash(path.relative(root, file))}: symbolic links are not allowed`); continue; }
     const parsed = splitFrontmatter(fs.readFileSync(file, "utf8"));
@@ -58,7 +63,7 @@ function main() {
         else {
           const keys = node.githubRefs.map(githubRefKey);
           if (new Set(keys).size !== keys.length) errors.push(`${node.id}: duplicate GitHub evidence metadata`);
-          for (const ref of node.githubRefs) if (!/^[a-z0-9_.-]+\/[a-z0-9_.-]+$/.test(ref.repository) || !["pull-request", "issue"].includes(ref.kind) || !Number.isInteger(ref.number) || ref.number < 1 || ref.url !== `https://github.com/${ref.repository}/${ref.kind === "pull-request" ? "pull" : "issues"}/${ref.number}`) errors.push(`${node.id}: invalid repo-qualified GitHub evidence`);
+          for (const ref of node.githubRefs) if (!/^[a-z0-9_.-]+\/[a-z0-9_.-]+$/.test(ref.repository) || !["pull-request", "issue"].includes(ref.kind) || !Number.isSafeInteger(ref.number) || ref.number < 1 || ref.url !== `https://github.com/${ref.repository}/${ref.kind === "pull-request" ? "pull" : "issues"}/${ref.number}`) errors.push(`${node.id}: invalid repo-qualified GitHub evidence`);
         }
       }
       for (const problem of policyProblems(loadPolicy(), graph)) errors.push(`routing policy: ${problem}`);

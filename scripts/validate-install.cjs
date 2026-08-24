@@ -26,7 +26,7 @@ function main() {
   if (manifest.scripts?.["verify:push"] !== "pnpm run validate" || manifest.scripts?.["verify:ci"] !== "pnpm run test:unit && pnpm run validate") errors.push("repository verification aliases are incomplete");
   if (manifest.devDependencies?.["@verndale/ai-pr"] !== "1.3.5" || manifest.scripts?.["pr:create"] !== "ai-pr") errors.push("the source repository PR helper must remain pinned and callable");
   const prWorkflow = fs.readFileSync(path.join(root, ".github/workflows/pr.yml"), "utf8");
-  if (!prWorkflow.includes("- bot/wiki-**")) errors.push("the generic PR workflow must ignore wiki bot branches");
+  if (!prWorkflow.includes("- bot/wiki-**") || !prWorkflow.includes("if: ${{ !startsWith(github.ref_name, 'bot/wiki-') }}")) errors.push("the generic PR workflow must ignore wiki bot branches for push and manual dispatch");
   const qualityWorkflow = fs.readFileSync(path.join(root, ".github/workflows/quality.yml"), "utf8");
   if (!qualityWorkflow.includes("run: pnpm run verify:ci") || /run: pnpm (?:run )?validate/.test(qualityWorkflow)) errors.push("Quality must invoke only verify:ci");
   const commitlintWorkflow = fs.readFileSync(path.join(root, ".github/workflows/commitlint.yml"), "utf8");
@@ -35,6 +35,7 @@ function main() {
     fs.readFileSync(path.join(root, ".github/workflows/wiki-sync.yml"), "utf8"),
     fs.readFileSync(path.join(root, ".github/workflows/wiki-issue-sync.yml"), "utf8"),
   ];
+  if (!wikiWorkflows[1].includes('--arg repository "$GITHUB_REPOSITORY"') || !wikiWorkflows[1].includes("{schemaVersion: 1, repository: $repository") || !wikiWorkflows[1].includes("mergedAt: $pr.merged_at, changedPaths: $files")) errors.push("Sync context wiki must emit the canonical versioned merge context");
   for (const workflow of [qualityWorkflow, commitlintWorkflow, ...wikiWorkflows]) {
     if (!workflow.includes('FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true') || !workflow.includes('node-version: "24.14.0"') || !workflow.includes("corepack enable")) errors.push("every canonical workflow must use Node 24.14.0 and the declared pnpm via Corepack");
   }

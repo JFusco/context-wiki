@@ -29,6 +29,7 @@ env:
 
 jobs:
   pr:
+    if: ${{ !startsWith(github.ref_name, 'bot/wiki-') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
