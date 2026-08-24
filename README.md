@@ -118,6 +118,8 @@ Useful options:
 --dry-run     Report managed-file drift without writing.
 --github      Install GitHub workflows even when auto-detection is not sufficient.
 --no-github   Skip GitHub workflows.
+--agents-only Reconcile only the managed AGENTS.md wiki block. Do not write assets,
+              hooks, workflows, graphs, or CLAUDE.md.
 --headless-navigation --wiki-root <dir>
               Install only navigation scripts and managed agent traversal.
 ```
@@ -139,6 +141,8 @@ It does not create a separate `.cursor/rules/wiki.mdc` file. Cursor receives the
 
 Headless mode requires the custom wiki root to exist. It installs no viewer, committed graph data, plan ledger, hook, or workflow and explicitly leaves the repository's authoring and validation conventions in place.
 
+Use `--agents-only` to distribute the same managed block without reconciling any other installer-owned file. Combine it with `--headless-navigation` for repositories that own their wiki lifecycle, and add `--wiki-root <dir>` when their Markdown lives somewhere other than `wiki/`. This mode rejects `--github` and `--no-github` because it never touches workflows.
+
 ## Token-efficient navigation
 
 The managed `AGENTS.md` block directs models to choose an intent before reading:
@@ -149,7 +153,9 @@ node scripts/wiki/navigate.cjs --intent wiring --from <node-id> --to <node-id>
 node scripts/wiki/navigate.cjs --intent impact --query "<terms>" --max-bytes 12000
 ```
 
-Routes use deterministic edge costs, a hub penalty, a small byte penalty, and stable tie-breaking. Output lists the exact Markdown itinerary, each file's byte count, and total estimated load. Agents open those pages in order and stop when grounded; ambiguous matches return candidates instead of guessing. For custom roots, add `--wiki-root <dir>`.
+The managed decision tree sends exact current-code, file, symbol, and command questions directly to source; single-topic rationale questions to the wiki index and its one matching page; and only cross-page why, wiring, ownership, or impact questions to the navigator. Queries use exact identifiers or repository-qualified GitHub references. When both endpoints are known, use exact `--from` and `--to` IDs.
+
+Routes use deterministic weighted shortest paths: relationship costs, a hub penalty, a small byte penalty, and stable tie-breaking. Output lists the exact Markdown itinerary, each file's byte count, and total estimated load. Agents open those pages sequentially and stop when grounded; ambiguous matches are retried with one returned exact ID instead of opening every candidate. For custom roots, add `--wiki-root <dir>`. Wiki discovery never starts with `grep`, `find`, or recursive `rg`; after a router miss the only fallback is one root-scoped fixed-string `rg`, followed by one known source path or one focused question.
 
 ## Repository workflow
 

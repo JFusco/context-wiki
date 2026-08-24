@@ -328,14 +328,47 @@ test("weighted routing is deterministic, byte-aware, and returns compact candida
 });
 
 test("installer parses supported arguments and rejects unknown flags", () => {
-  assert.deepEqual(installer.parseArgs([]), { repo: process.cwd(), dryRun: false, github: "auto", wikiRoot: "wiki", headlessNavigation: false });
-  assert.deepEqual(installer.parseArgs(["--repo", "/tmp/demo", "--dry-run", "--github"]), { repo: "/tmp/demo", dryRun: true, github: "on", wikiRoot: "wiki", headlessNavigation: false });
+  assert.deepEqual(installer.parseArgs([]), { repo: process.cwd(), dryRun: false, github: "auto", wikiRoot: "wiki", headlessNavigation: false, agentsOnly: false });
+  assert.deepEqual(installer.parseArgs(["--repo", "/tmp/demo", "--dry-run", "--github"]), { repo: "/tmp/demo", dryRun: true, github: "on", wikiRoot: "wiki", headlessNavigation: false, agentsOnly: false });
   assert.equal(installer.parseArgs(["--no-github"]).github, "off");
-  assert.deepEqual(installer.parseArgs(["--headless-navigation", "--wiki-root", "docs/context"]), { repo: process.cwd(), dryRun: false, github: "auto", wikiRoot: "docs/context", headlessNavigation: true });
+  assert.deepEqual(installer.parseArgs(["--headless-navigation", "--wiki-root", "docs/context"]), { repo: process.cwd(), dryRun: false, github: "auto", wikiRoot: "docs/context", headlessNavigation: true, agentsOnly: false });
+  assert.equal(installer.parseArgs(["--agents-only"]).agentsOnly, true);
   assert.equal(installer.normalizeWikiRoot("./docs/context/"), "docs/context");
   assert.throws(() => installer.normalizeWikiRoot("../outside"), /safe repository-relative/);
   assert.equal(installer.parseArgs(["--help"]).help, true);
   assert.throws(() => installer.parseArgs(["--unknown"]), /unknown argument/);
+});
+
+test("generated agent guidance shares one deterministic route-first contract", (t) => {
+  const full = installer.managedAgentsText();
+  const headless = installer.managedAgentsText({ wikiRoot: "wiki", headlessNavigation: true });
+  const custom = installer.managedAgentsText({ wikiRoot: "wiki/site", headlessNavigation: true });
+  const required = [
+    /exact current-code, file, symbol, or command question/,
+    /deterministic weighted shortest route/,
+    /sequentially, never speculatively in parallel/,
+    /rerun with one returned exact ID/,
+    /rg -n --fixed-strings/,
+    /Never read generated graph JSON directly/,
+  ];
+
+  for (const pattern of required) {
+    assert.match(full, pattern);
+    assert.match(headless, pattern);
+    assert.match(custom, pattern);
+  }
+  assert.match(headless, /--wiki-root "wiki" --intent why/);
+  assert.match(custom, /--wiki-root "wiki\/site" --intent why/);
+  assert.match(custom, /rg -n --fixed-strings "<exact term>" wiki\/site\//);
+  assert.equal(full.includes("navigation only"), false);
+  assert.match(headless, /navigation only/);
+
+  const root = temp(t, "installer-marker-validation");
+  const file = path.join(root, "AGENTS.md");
+  write(file, "<!-- wiki-skill:start -->\nmissing end\n");
+  assert.match(installer.managedBlockProblem(file, "<!-- wiki-skill:start -->", "<!-- wiki-skill:end -->"), /malformed/);
+  write(file, "<!-- wiki-skill:start -->\na\n<!-- wiki-skill:end -->\n<!-- wiki-skill:start -->\nb\n<!-- wiki-skill:end -->\n");
+  assert.match(installer.managedBlockProblem(file, "<!-- wiki-skill:start -->", "<!-- wiki-skill:end -->"), /duplicate/);
 });
 
 test("installer resolves projects and protects path and atomic-write boundaries", (t) => {

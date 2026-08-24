@@ -2,12 +2,12 @@
   "version": 1,
   "wikiRoot": "wiki",
   "counts": {
-    "nodes": 19,
-    "edges": 44,
+    "nodes": 21,
+    "edges": 54,
     "byType": {
       "index": 3,
-      "journal": 5,
-      "plan": 5,
+      "journal": 6,
+      "plan": 6,
       "topic": 6
     }
   },
@@ -32,8 +32,8 @@
       "githubRefs": [],
       "bytes": 1658,
       "degree": 2,
-      "x": 0.789141,
-      "y": 0.614213,
+      "x": 0.826239,
+      "y": 0.56332,
       "size": 8
     },
     {
@@ -44,8 +44,8 @@
       "githubRefs": [],
       "bytes": 1938,
       "degree": 3,
-      "x": 0.546948,
-      "y": 0.837166,
+      "x": 0.62349,
+      "y": 0.781831,
       "size": 8
     },
     {
@@ -63,8 +63,8 @@
       ],
       "bytes": 2391,
       "degree": 7,
-      "x": 0.245485,
-      "y": 0.9694,
+      "x": 0.365341,
+      "y": 0.930874,
       "size": 8
     },
     {
@@ -88,8 +88,8 @@
       ],
       "bytes": 2593,
       "degree": 7,
-      "x": -0.082579,
-      "y": 0.996584,
+      "x": 0.07473,
+      "y": 0.997204,
       "size": 8
     },
     {
@@ -107,8 +107,20 @@
       ],
       "bytes": 2218,
       "degree": 4,
-      "x": -0.401695,
-      "y": 0.915773,
+      "x": -0.222521,
+      "y": 0.974928,
+      "size": 8
+    },
+    {
+      "id": "wiki/journal/2026-08-24-deterministic-route-first-agent-guidance.md",
+      "label": "Make agent wiki navigation deterministic and route-first",
+      "type": "journal",
+      "aliases": [],
+      "githubRefs": [],
+      "bytes": 1415,
+      "degree": 5,
+      "x": -0.5,
+      "y": 0.866025,
       "size": 8
     },
     {
@@ -119,8 +131,8 @@
       "githubRefs": [],
       "bytes": 2907,
       "degree": 2,
-      "x": 0.945817,
-      "y": 0.324699,
+      "x": 0.955573,
+      "y": 0.294755,
       "size": 12
     },
     {
@@ -131,8 +143,8 @@
       "githubRefs": [],
       "bytes": 8073,
       "degree": 4,
-      "x": -0.677282,
-      "y": 0.735724,
+      "x": -0.733052,
+      "y": 0.680173,
       "size": 8
     },
     {
@@ -150,8 +162,8 @@
       ],
       "bytes": 2453,
       "degree": 4,
-      "x": -0.879474,
-      "y": 0.475947,
+      "x": -0.900969,
+      "y": 0.433884,
       "size": 8
     },
     {
@@ -175,8 +187,8 @@
       ],
       "bytes": 1895,
       "degree": 4,
-      "x": -0.986361,
-      "y": 0.164595,
+      "x": -0.988831,
+      "y": 0.149042,
       "size": 8
     },
     {
@@ -194,8 +206,8 @@
       ],
       "bytes": 1924,
       "degree": 4,
-      "x": -0.986361,
-      "y": -0.164595,
+      "x": -0.988831,
+      "y": -0.149042,
       "size": 8
     },
     {
@@ -225,8 +237,20 @@
       ],
       "bytes": 4312,
       "degree": 5,
-      "x": -0.879474,
-      "y": -0.475947,
+      "x": -0.900969,
+      "y": -0.433884,
+      "size": 8
+    },
+    {
+      "id": "wiki/plans/2026-08-24-deterministic-route-first-wiki-guidance-and-pr-127-recovery-9f56bf461c.md",
+      "label": "Deterministic, Route-First Wiki Guidance and PR 127 Recovery",
+      "type": "plan",
+      "aliases": [],
+      "githubRefs": [],
+      "bytes": 2716,
+      "degree": 6,
+      "x": -0.733052,
+      "y": -0.680173,
       "size": 8
     },
     {
@@ -284,10 +308,10 @@
           "url": "https://github.com/jfusco/context-wiki/pull/561"
         }
       ],
-      "bytes": 46750,
-      "degree": 7,
-      "x": -0.677282,
-      "y": -0.735724,
+      "bytes": 47137,
+      "degree": 8,
+      "x": -0.5,
+      "y": -0.866025,
       "size": 12
     },
     {
@@ -298,8 +322,8 @@
       "githubRefs": [],
       "bytes": 1951,
       "degree": 4,
-      "x": -0.401695,
-      "y": -0.915773,
+      "x": -0.222521,
+      "y": -0.974928,
       "size": 8
     },
     {
@@ -321,10 +345,10 @@
           "url": "https://github.com/jfusco/context-wiki/issues/7"
         }
       ],
-      "bytes": 2733,
-      "degree": 7,
-      "x": -0.082579,
-      "y": -0.996584,
+      "bytes": 3128,
+      "degree": 11,
+      "x": 0.07473,
+      "y": -0.997204,
       "size": 8
     },
     {
@@ -342,8 +366,8 @@
       ],
       "bytes": 1586,
       "degree": 2,
-      "x": 0.245485,
-      "y": -0.9694,
+      "x": 0.365341,
+      "y": -0.930874,
       "size": 8
     },
     {
@@ -361,8 +385,8 @@
       ],
       "bytes": 1227,
       "degree": 7,
-      "x": 0.546948,
-      "y": -0.837166,
+      "x": 0.62349,
+      "y": -0.781831,
       "size": 8
     },
     {
@@ -382,10 +406,10 @@
           "url": "https://github.com/jfusco/context-wiki/issues/7"
         }
       ],
-      "bytes": 3093,
-      "degree": 3,
-      "x": 0.789141,
-      "y": -0.614213,
+      "bytes": 3514,
+      "degree": 7,
+      "x": 0.826239,
+      "y": -0.56332,
       "size": 8
     },
     {
@@ -403,8 +427,8 @@
       ],
       "bytes": 2239,
       "degree": 10,
-      "x": 0.945817,
-      "y": -0.324699,
+      "x": 0.955573,
+      "y": -0.294755,
       "size": 8
     }
   ],
@@ -438,6 +462,13 @@
       "relation": "link"
     },
     {
+      "id": "0c2d4d13f6f9adc5",
+      "source": "wiki/journal/2026-08-24-deterministic-route-first-agent-guidance.md",
+      "target": "wiki/topics/wiki-navigation-and-automation.md",
+      "type": "topic",
+      "relation": "topic"
+    },
+    {
       "id": "0d4d66553b72260c",
       "source": "wiki/journal/2026-08-23-promote-canonical-wiki-parity.md",
       "target": "wiki/topics/repository-automation.md",
@@ -448,6 +479,13 @@
       "id": "161b0e42b682ca4e",
       "source": "wiki/journal/2026-08-23-promote-canonical-wiki-parity.md",
       "target": "wiki/topics/wiki-navigation-and-automation.md",
+      "type": "topic",
+      "relation": "topic"
+    },
+    {
+      "id": "1698ca325940b0db",
+      "source": "wiki/plans/2026-08-24-deterministic-route-first-wiki-guidance-and-pr-127-recovery-9f56bf461c.md",
+      "target": "wiki/topics/installer-contract.md",
       "type": "topic",
       "relation": "topic"
     },
@@ -464,6 +502,13 @@
       "target": "wiki/topics/wiki-navigation-and-automation.md",
       "type": "link",
       "relation": "link"
+    },
+    {
+      "id": "2c1308e9f5409628",
+      "source": "wiki/plans/2026-08-24-deterministic-route-first-wiki-guidance-and-pr-127-recovery-9f56bf461c.md",
+      "target": "wiki/topics/wiki-navigation-and-automation.md",
+      "type": "topic",
+      "relation": "topic"
     },
     {
       "id": "2da41c12bc884d8b",
@@ -485,6 +530,13 @@
       "target": "wiki/topics/installer-contract.md",
       "type": "topic",
       "relation": "topic"
+    },
+    {
+      "id": "3d44ee1bf1449819",
+      "source": "wiki/topics/wiki-navigation-and-automation.md",
+      "target": "wiki/plans/2026-08-24-deterministic-route-first-wiki-guidance-and-pr-127-recovery-9f56bf461c.md",
+      "type": "link",
+      "relation": "link"
     },
     {
       "id": "4807237ed84a35db",
@@ -557,6 +609,13 @@
       "relation": "topic"
     },
     {
+      "id": "8ace0989315dd160",
+      "source": "wiki/plans/INDEX.md",
+      "target": "wiki/plans/2026-08-24-deterministic-route-first-wiki-guidance-and-pr-127-recovery-9f56bf461c.md",
+      "type": "link",
+      "relation": "link"
+    },
+    {
       "id": "9142df0d0f2aa507",
       "source": "wiki/topics/wiki-system.md",
       "target": "wiki/plans/2026-08-20-global-wiki-skill-and-repository-bootstrap-f45de79a63.md",
@@ -569,6 +628,20 @@
       "target": "wiki/topics/script-testing.md",
       "type": "link",
       "relation": "link"
+    },
+    {
+      "id": "92a2de181a54bdfb",
+      "source": "wiki/journal/2026-08-24-deterministic-route-first-agent-guidance.md",
+      "target": "wiki/topics/installer-contract.md",
+      "type": "topic",
+      "relation": "topic"
+    },
+    {
+      "id": "9c96ed4648505b67",
+      "source": "wiki/journal/2026-08-24-deterministic-route-first-agent-guidance.md",
+      "target": "wiki/plans/2026-08-24-deterministic-route-first-wiki-guidance-and-pr-127-recovery-9f56bf461c.md",
+      "type": "plan",
+      "relation": "plan"
     },
     {
       "id": "9fc5fd7afe1c2605",
@@ -595,6 +668,13 @@
       "id": "b40aeda7a1e0e956",
       "source": "wiki/plans/INDEX.md",
       "target": "wiki/plans/2026-08-23-create-tracking-issue-and-implementation-branch-aa427de2df.md",
+      "type": "link",
+      "relation": "link"
+    },
+    {
+      "id": "b74c7a914dab81a0",
+      "source": "wiki/topics/installer-contract.md",
+      "target": "wiki/plans/2026-08-24-deterministic-route-first-wiki-guidance-and-pr-127-recovery-9f56bf461c.md",
       "type": "link",
       "relation": "link"
     },
@@ -644,6 +724,13 @@
       "id": "d214f2e19627d7e8",
       "source": "wiki/topics/wiki-system.md",
       "target": "wiki/topics/installer-contract.md",
+      "type": "link",
+      "relation": "link"
+    },
+    {
+      "id": "d26006dba2d48208",
+      "source": "wiki/topics/installer-contract.md",
+      "target": "wiki/journal/2026-08-24-deterministic-route-first-agent-guidance.md",
       "type": "link",
       "relation": "link"
     },
@@ -709,6 +796,13 @@
       "target": "wiki/topics/wiki-system.md",
       "type": "topic",
       "relation": "topic"
+    },
+    {
+      "id": "f5048c3334c6df03",
+      "source": "wiki/topics/wiki-navigation-and-automation.md",
+      "target": "wiki/journal/2026-08-24-deterministic-route-first-agent-guidance.md",
+      "type": "link",
+      "relation": "link"
     },
     {
       "id": "faafe85ffa17bc29",

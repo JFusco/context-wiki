@@ -21,6 +21,7 @@ Keep repository history cheap for agents to retrieve and keep portable wiki auto
 
 ## Decisions
 
+- 2026-08-24 — Standardized full and headless agent guidance on one route-first decision tree, deterministic weighted shortest routes, sequential reads, exact-ID ambiguity retries, and a single fixed-string fallback after a router miss ([plan](../plans/2026-08-24-deterministic-route-first-wiki-guidance-and-pr-127-recovery-9f56bf461c.md), [journal](../journal/2026-08-24-deterministic-route-first-agent-guidance.md)).
 - 2026-08-23 — Promoted deterministic navigation, repo-qualified GitHub evidence, canonical Actions, safe hooks, and the custom-root headless boundary through the `/wiki` skill ([issue #7](https://github.com/JFusco/context-wiki/issues/7)).
 
 ## Open threads

@@ -25,7 +25,7 @@ const HEADLESS_ASSETS = new Set([
 ]);
 
 function parseArgs(argv) {
-  const out = { repo: process.cwd(), dryRun: false, github: "auto", wikiRoot: "wiki", headlessNavigation: false };
+  const out = { repo: process.cwd(), dryRun: false, github: "auto", wikiRoot: "wiki", headlessNavigation: false, agentsOnly: false };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--repo") out.repo = argv[++i];
     else if (argv[i] === "--dry-run") out.dryRun = true;
@@ -33,10 +33,21 @@ function parseArgs(argv) {
     else if (argv[i] === "--no-github") out.github = "off";
     else if (argv[i] === "--wiki-root") out.wikiRoot = argv[++i];
     else if (argv[i] === "--headless-navigation") out.headlessNavigation = true;
+    else if (argv[i] === "--agents-only") out.agentsOnly = true;
     else if (argv[i] === "--help") out.help = true;
     else throw new Error(`unknown argument: ${argv[i]}`);
   }
   return out;
+}
+
+function managedBlockProblem(file, start, end) {
+  if (!fs.existsSync(file)) return null;
+  const text = fs.readFileSync(file, "utf8");
+  const starts = text.split(start).length - 1;
+  const ends = text.split(end).length - 1;
+  if (starts === 0 && ends === 0) return null;
+  if (starts !== 1 || ends !== 1 || text.indexOf(end) < text.indexOf(start)) return "malformed or duplicate managed markers";
+  return null;
 }
 
 function normalizeWikiRoot(value) {
@@ -108,18 +119,31 @@ function hasSymlinkComponent(root, target) {
   return false;
 }
 
+function navigationGuidance(wikiRoot, includeWikiRoot = false) {
+  const commandRoot = includeWikiRoot ? ` --wiki-root ${JSON.stringify(wikiRoot)}` : "";
+  return [
+    "- For an exact current-code, file, symbol, or command question, inspect the named source or use targeted source `rg`; do not load history.",
+    `- For a direct single-topic history or rationale question, start at \`${wikiRoot}/INDEX.md\` when it exists and open only the page it routes to.`,
+    `- Only for a cross-page why, wiring, ownership, or impact question, run \`node scripts/wiki/navigate.cjs${commandRoot} --intent why --query "<terms>"\` before opening wiki pages. Use \`wiring\` for ownership/dependencies and \`impact\` for change scope.`,
+    "- Query with exact slugs, identifiers, symbols, or repository-qualified GitHub references. Never use a bare issue or PR number such as `#123`.",
+    "- When both endpoints are known, use exact `--from` and `--to` node IDs.",
+    "- Trust the router's deterministic weighted shortest route, which accounts for relationship cost, hubs, and page bytes. Open only its itinerary; never add candidates, neighbors, or adjacent pages.",
+    "- Read itinerary pages sequentially, never speculatively in parallel, and stop as soon as the answer is grounded.",
+    "- If resolution is ambiguous, rerun with one returned exact ID; never open every candidate.",
+    `- Never use \`grep\`, \`find\`, or recursive \`rg\` as initial wiki discovery. After a router miss, run at most one root-scoped exact search: \`rg -n --fixed-strings "<exact term>" ${wikiRoot}/\`. If it fails, inspect one known source path or ask one focused question; never widen the search.`,
+    "- Never read generated graph JSON directly.",
+  ];
+}
+
 function managedAgentsText({ wikiRoot = "wiki", headlessNavigation = false } = {}) {
-  const commandRoot = wikiRoot === "wiki" ? "" : ` --wiki-root ${JSON.stringify(wikiRoot)}`;
+  const navigation = navigationGuidance(wikiRoot, headlessNavigation);
   if (headlessNavigation) return [
     BLOCK_START,
     "## Context wiki navigation",
     "",
-    `Use \`${wikiRoot}/\` as this repository's existing context source. Never bulk-load that directory or a generated graph JSON file.`,
+    `Use \`${wikiRoot}/\` as this repository's existing context source. Never bulk-load that directory.`,
     "",
-    `- For a direct single-topic history or rationale question, start at \`${wikiRoot}/INDEX.md\` when it exists and open only the page it routes to.`,
-    `- Only for a cross-page question, use \`node scripts/wiki/navigate.cjs${commandRoot} --intent why --query "<terms>"\`. Use \`wiring\` for ownership/dependency questions and \`impact\` before cross-topic changes.`,
-    "- Read only the returned byte-counted itinerary, in order, and stop as soon as the answer is grounded.",
-    "- If navigation returns candidates or no route, rerun with exact `--from`/`--to` node IDs. If ambiguity remains, ask one focused question or use one targeted `rg`; never guess a route.",
+    ...navigation,
     "- This installation owns navigation only. Preserve this repository's existing wiki authoring, validation, hooks, workflows, and generated-data conventions.",
     "",
     "This managed block is shared by Codex, Cursor, and Claude (via `@AGENTS.md` in `CLAUDE.md`).",
@@ -129,12 +153,9 @@ function managedAgentsText({ wikiRoot = "wiki", headlessNavigation = false } = {
     BLOCK_START,
     "## Context wiki",
     "",
-    "Use `wiki/` as this repository's durable record of executed plans, decisions, and substantive change history. Never bulk-load `wiki/` or `scripts/wiki/graph/data/graph.json`.",
+    "Use `wiki/` as this repository's durable record of executed plans, decisions, and substantive change history. Never bulk-load `wiki/`.",
     "",
-    "- For a direct single-topic history or rationale question, start at `wiki/INDEX.md` and open only the page it routes to.",
-    "- Only for a cross-page question, use `node scripts/wiki/navigate.cjs --intent why --query \"<terms>\"`. Use `wiring` for ownership/dependency questions and `impact` before cross-topic changes.",
-    "- Read only the returned byte-counted itinerary, in order, and stop as soon as the answer is grounded.",
-    "- If navigation returns candidates or no route, rerun with exact `--from`/`--to` node IDs. If ambiguity remains, ask one focused question or use one targeted `rg`; never guess a route.",
+    ...navigation,
     "- After executing a Claude, Codex, or Cursor plan, archive it and add the journal/topic updates in the same delivery per `wiki/MECHANICS.md`.",
     "- Run `node scripts/wiki/discover-plans.cjs` to recover missed plans, `node scripts/wiki/build-graph.cjs` after wiki edits, and `node scripts/wiki/check.cjs` before completion.",
     "- The Sigma.js graph indexes only Markdown under `wiki/`; never add code nodes.",
@@ -370,16 +391,17 @@ function main() {
     args = parseArgs(process.argv.slice(2));
     args.wikiRoot = normalizeWikiRoot(args.wikiRoot);
     if (args.wikiRoot !== "wiki" && !args.headlessNavigation) throw new Error("--wiki-root requires --headless-navigation");
+    if (args.agentsOnly && args.github !== "auto") throw new Error("--agents-only cannot be combined with --github or --no-github");
   } catch (error) {
     console.error(`FAIL ${error.message}`);
     return 2;
   }
   if (args.help) {
-    console.log("Usage: init-repository.cjs [--repo <path>] [--dry-run] [--github|--no-github] [--headless-navigation --wiki-root <dir>]");
+    console.log("Usage: init-repository.cjs [--repo <path>] [--dry-run] [--github|--no-github] [--agents-only] [--headless-navigation --wiki-root <dir>]");
     return 0;
   }
   const project = resolveProject(args.repo);
-  const includeGithub = !args.headlessNavigation && (args.github === "on" || (args.github === "auto" && project.isGit && githubRemote(project.root)));
+  const includeGithub = !args.agentsOnly && !args.headlessNavigation && (args.github === "on" || (args.github === "auto" && project.isGit && githubRemote(project.root)));
   const changes = [];
   const conflicts = [];
   const warnings = [];
@@ -389,33 +411,43 @@ function main() {
     if (hasSymlinkComponent(project.root, wikiDirectory)) conflicts.push(`${args.wikiRoot}/ (symlink path)`);
     else if (!fs.existsSync(wikiDirectory) || !fs.statSync(wikiDirectory).isDirectory()) conflicts.push(`${args.wikiRoot}/ (missing custom wiki root)`);
   }
-  for (const relative of args.headlessNavigation ? [] : ["wiki/topics", "wiki/journal", "wiki/plans"]) {
-    const directory = path.join(project.root, relative);
-    if (hasSymlinkComponent(project.root, directory)) conflicts.push(`${relative}/ (symlink path)`);
-    else if (!fs.existsSync(directory)) {
-      changes.push(`created ${relative}/`);
-      if (!args.dryRun) fs.mkdirSync(directory, { recursive: true });
+  if (!args.agentsOnly) {
+    for (const relative of args.headlessNavigation ? [] : ["wiki/topics", "wiki/journal", "wiki/plans"]) {
+      const directory = path.join(project.root, relative);
+      if (hasSymlinkComponent(project.root, directory)) conflicts.push(`${relative}/ (symlink path)`);
+      else if (!fs.existsSync(directory)) {
+        changes.push(`created ${relative}/`);
+        if (!args.dryRun) fs.mkdirSync(directory, { recursive: true });
+      }
     }
+    installAssets({ root: project.root, includeGithub, dryRun: args.dryRun, changes, conflicts, headlessNavigation: args.headlessNavigation });
   }
-  installAssets({ root: project.root, includeGithub, dryRun: args.dryRun, changes, conflicts, headlessNavigation: args.headlessNavigation });
   const agentsFile = path.join(project.root, "AGENTS.md");
   const claudeFile = path.join(project.root, "CLAUDE.md");
   if (hasSymlinkComponent(project.root, agentsFile)) conflicts.push("AGENTS.md (symlink path)");
-  else upsertBlock(agentsFile, managedAgentsText({ wikiRoot: args.wikiRoot, headlessNavigation: args.headlessNavigation }), BLOCK_START, BLOCK_END, args.dryRun, changes);
-  if (hasSymlinkComponent(project.root, claudeFile)) conflicts.push("CLAUDE.md (symlink path)");
-  else upsertClaudeImport(claudeFile, args.dryRun, changes);
-  const hook = project.isGit && !args.headlessNavigation ? installHook(project.root, args.dryRun, changes, warnings) : null;
-  if (args.headlessNavigation) warnings.push("headless navigation mode preserved existing hooks, workflows, wiki mechanics, viewer, graph output, and plan ledger");
+  else {
+    const problem = managedBlockProblem(agentsFile, BLOCK_START, BLOCK_END);
+    if (problem) conflicts.push(`AGENTS.md (${problem})`);
+    else upsertBlock(agentsFile, managedAgentsText({ wikiRoot: args.wikiRoot, headlessNavigation: args.headlessNavigation }), BLOCK_START, BLOCK_END, args.dryRun, changes);
+  }
+  if (!args.agentsOnly) {
+    if (hasSymlinkComponent(project.root, claudeFile)) conflicts.push("CLAUDE.md (symlink path)");
+    else upsertClaudeImport(claudeFile, args.dryRun, changes);
+  }
+  const hook = project.isGit && !args.agentsOnly && !args.headlessNavigation ? installHook(project.root, args.dryRun, changes, warnings) : null;
+  if (args.agentsOnly) warnings.push("agents-only mode preserved assets, hooks, workflows, graphs, and CLAUDE.md");
+  else if (args.headlessNavigation) warnings.push("headless navigation mode preserved existing hooks, workflows, wiki mechanics, viewer, graph output, and plan ledger");
   else if (!project.isGit) warnings.push("not a Git repository; Git hooks and GitHub workflows were skipped");
   else if (args.github === "off") warnings.push("GitHub workflow installation was disabled by --no-github");
   else if (!includeGithub) warnings.push("no GitHub origin detected; GitHub workflows were skipped");
 
-  if (!args.dryRun && conflicts.length === 0 && !args.headlessNavigation) {
+  if (!args.dryRun && conflicts.length === 0 && !args.agentsOnly && !args.headlessNavigation) {
     if (!runRepoScript(project.root, "build-graph.cjs")) conflicts.push("graph build failed");
     else if (!runRepoScript(project.root, "check.cjs")) conflicts.push("wiki validation failed");
   }
 
-  console.log(`${args.dryRun ? "CHECK" : "PASS"} wiki ${args.headlessNavigation ? "navigation" : "kit"} ${args.dryRun ? "inspection" : "installation"}: ${project.root}`);
+  const operation = args.agentsOnly ? "agent guidance" : args.headlessNavigation ? "navigation" : "kit";
+  console.log(`${args.dryRun ? "CHECK" : "PASS"} wiki ${operation} ${args.dryRun ? "inspection" : "installation"}: ${project.root}`);
   for (const item of changes) console.log(`- ${item}`);
   for (const item of warnings) console.warn(`warning: ${item}`);
   for (const item of conflicts) console.error(`conflict: ${item}`);
@@ -426,4 +458,4 @@ function main() {
 
 if (require.main === module) process.exit(main());
 
-module.exports = { parseArgs, normalizeWikiRoot, resolveProject, installAssets, installHook, managedAgentsText, upsertBlock, upsertClaudeImport, sha, isInside, hasSymlinkComponent, atomicWrite };
+module.exports = { parseArgs, normalizeWikiRoot, resolveProject, installAssets, installHook, managedAgentsText, navigationGuidance, managedBlockProblem, upsertBlock, upsertClaudeImport, sha, isInside, hasSymlinkComponent, atomicWrite };

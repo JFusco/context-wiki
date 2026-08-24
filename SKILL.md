@@ -19,11 +19,11 @@ Resolve the Git root when present. Inspect `git status --short` and preserve exi
 
 ## Navigate before reading
 
-For a direct single-topic history or rationale question, start at the repository's wiki index and open only the page it routes to. Only for a cross-page question, use the managed `AGENTS.md` command with the matching `why`, `wiring`, or `impact` intent:
+For an exact current-code, file, symbol, or command question, inspect the named source or use targeted source `rg`; do not load history. For a direct single-topic history or rationale question, start at the repository's wiki index and open only the page it routes to. Only for a cross-page why, wiring, ownership, or impact question, use the managed `AGENTS.md` command with the matching intent:
 
 `node scripts/wiki/navigate.cjs --intent why --query "<terms>"`
 
-Add `--wiki-root <dir>` in headless installations. Read only the returned itinerary—explicit Source→Target authority, relationship, per-page bytes, and total bytes—in order, and stop when grounded. Never bulk-load the wiki or generated graph JSON. If navigation returns candidates or no route, rerun with exact IDs via `--from` and `--to`; if ambiguity remains, ask one focused question or use one targeted `rg`. Never guess.
+Add `--wiki-root <dir>` in headless installations. Query with exact slugs, identifiers, symbols, or repository-qualified GitHub references; when both endpoints are known, use exact `--from` and `--to` IDs. Trust the deterministic weighted shortest route and read only its itinerary—explicit Source→Target authority, relationship, per-page bytes, and total bytes—sequentially, stopping when grounded. Never expand the route with neighboring pages or bulk-load the wiki. Retry ambiguity with one returned exact ID, not every candidate. Never use `grep`, `find`, or recursive `rg` for initial wiki discovery; after a miss, allow one root-scoped `rg -n --fixed-strings`, then inspect one known source path or ask one focused question. Never read generated graph JSON directly or guess a path.
 
 The browser viewer exposes the same weighted policy through Source and Target selectors. Graph nodes remain Markdown files under the configured wiki root; code and automation are never nodes.
 
@@ -36,6 +36,10 @@ Run from this skill's directory:
 Use `--github` to force the canonical Actions or `--no-github` to omit them. For navigation-only integration with existing mechanics:
 
 `node "$SKILL_ROOT/scripts/init-repository.cjs" --repo "$PROJECT_ROOT" --headless-navigation --wiki-root <relative-dir>`
+
+To reconcile only the managed `AGENTS.md` block while preserving assets, hooks, workflows, graphs, and `CLAUDE.md`:
+
+`node "$SKILL_ROOT/scripts/init-repository.cjs" --repo "$PROJECT_ROOT" --agents-only [--headless-navigation] [--wiki-root <relative-dir>]`
 
 The full installer checksum-manages scripts, viewer assets, three wiki workflows, managed `AGENTS.md`/`CLAUDE.md` blocks, and an advisory pre-commit block. It creates `wiki/plans/INDEX.md` only when missing. It preserves authored files, local hook failures, Husky 9 dispatch, and conflicts instead of overwriting them.
 
