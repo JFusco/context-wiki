@@ -13,6 +13,6 @@ The suite protects parsing, dates, plan association and archiving, filesystem co
 
 - [Add focused `.cjs` unit tests](../plans/2026-08-23-add-focused-cjs-unit-tests-6569724de4.md) established the fast helper-level suite.
 - [Create tracking issue and implementation branch](../plans/2026-08-23-create-tracking-issue-and-implementation-branch-aa427de2df.md) records the GitHub issue and branch setup for that delivery.
-- [Issue #5](https://github.com/JFusco/context-wiki/issues/5) adds the topic-integrity regression coverage.
+- [Issue #5](https://github.com/JFusco/context-wiki/issues/5 — closed) adds the topic-integrity regression coverage.
 
 This testing strategy supports the broader [wiki system](./wiki-system.md).

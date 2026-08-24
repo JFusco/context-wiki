@@ -78,9 +78,15 @@
           "kind": "issue",
           "number": 7,
           "url": "https://github.com/jfusco/context-wiki/issues/7"
+        },
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "pull-request",
+          "number": 8,
+          "url": "https://github.com/jfusco/context-wiki/pull/8"
         }
       ],
-      "bytes": 2555,
+      "bytes": 2593,
       "degree": 7,
       "x": 0.07473,
       "y": 0.997204,
@@ -339,7 +345,7 @@
           "url": "https://github.com/jfusco/context-wiki/issues/7"
         }
       ],
-      "bytes": 3117,
+      "bytes": 3128,
       "degree": 11,
       "x": 0.07473,
       "y": -0.997204,
@@ -377,7 +383,7 @@
           "url": "https://github.com/jfusco/context-wiki/issues/5"
         }
       ],
-      "bytes": 1216,
+      "bytes": 1227,
       "degree": 7,
       "x": 0.62349,
       "y": -0.781831,
@@ -419,7 +425,7 @@
           "url": "https://github.com/jfusco/context-wiki/issues/5"
         }
       ],
-      "bytes": 2228,
+      "bytes": 2239,
       "degree": 10,
       "x": 0.955573,
       "y": -0.294755,
