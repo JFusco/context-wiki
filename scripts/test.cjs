@@ -21,7 +21,7 @@ function init(root, args = []) { return node(INIT, ["--repo", root, ...args], { 
 function git(root, args) { const result = run("git", args, { cwd: root }); assert.equal(result.status, 0, result.stderr); return result.stdout.trim(); }
 function makeGit(name, remote = "") {
   const root = temp(name);
-  git(root, ["init", "-q"]);
+  git(root, ["init", "-q", "-b", "main"]);
   git(root, ["config", "user.name", "Wiki Test"]);
   git(root, ["config", "user.email", "wiki@example.test"]);
   if (remote) git(root, ["remote", "add", "origin", remote]);
@@ -52,6 +52,7 @@ test("package manifest exposes the Sigma graph workflow", () => {
   }
   assert.match(fs.readFileSync(path.join(SKILL, ".github/workflows/pr.yml"), "utf8"), /- bot\/wiki-\*\*/);
   const quality = fs.readFileSync(path.join(SKILL, ".github/workflows/quality.yml"), "utf8");
+  assert.match(quality, /fetch-depth: 0/);
   assert.match(quality, /run: pnpm run verify:ci/);
   assert.doesNotMatch(quality, /run: pnpm (?:run )?validate/);
 });
@@ -194,6 +195,7 @@ test("Git initialization installs workflows and dispatches a legacy hook", () =>
   assert.match(check, /workflow_dispatch: \{\}/);
   assert.match(check, /jobs:\n  check:/);
   assert.match(check, /group: wiki-integrity-/);
+  assert.match(check, /fetch-depth: 0/);
   assert.doesNotMatch(check, /pull-requests: read/);
   assert.equal((check.match(/pnpm run wiki:check/g) || []).length, 1);
   assert.equal((check.match(/run: pnpm run /g) || []).length, 1);
