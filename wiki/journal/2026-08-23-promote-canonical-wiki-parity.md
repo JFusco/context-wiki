@@ -2,7 +2,7 @@
 date: 2026-08-23
 topics: [wiki-navigation-and-automation, repository-automation, installer-contract, graph-viewer]
 plans: [2026-08-23-promote-canonical-wiki-parity-369416673b.md]
-pr: https://github.com/JFusco/context-wiki/pull/8
+pr: https://github.com/jfusco/context-wiki/pull/8
 issue: https://github.com/JFusco/context-wiki/issues/7
 ---
 
