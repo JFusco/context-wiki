@@ -2,7 +2,7 @@
 date: 2026-08-24
 topics: [installer-contract, wiki-navigation-and-automation]
 plans: [2026-08-24-deterministic-route-first-wiki-guidance-and-pr-127-recovery-9f56bf461c.md]
-pr: pending
+pr: https://github.com/jfusco/context-wiki/pull/11
 ---
 # Make agent wiki navigation deterministic and route-first
 
