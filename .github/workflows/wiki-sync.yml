@@ -60,7 +60,7 @@ jobs:
         with:
           ref: ${{ steps.context.outputs.base }}
           fetch-depth: 0
-          persist-credentials: false
+          token: ${{ secrets.PR_BOT_TOKEN }}
       - name: Setup Node
         uses: actions/setup-node@v4
         with:

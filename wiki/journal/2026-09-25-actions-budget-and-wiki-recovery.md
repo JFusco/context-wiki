@@ -7,6 +7,8 @@ pr: https://github.com/JFusco/context-wiki/pull/14
 ---
 # Reduce Actions usage and make wiki recovery repeatable
 
+Hosted merge testing showed that API authentication did not configure Git after checkout. Both wiki bot workflows now give `actions/checkout` the validated `PR_BOT_TOKEN`, so review branches can be pushed without expanding workflow permissions.
+
 ## Why
 
 Daily maintenance, duplicate push checks, draft full-suite runs, and dependency installation in wiki-only jobs consumed runner time without improving release confidence. Billing exhaustion then prevented merge-triggered wiki reconciliation, so a reliable batch recovery path was needed.
