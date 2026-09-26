@@ -268,7 +268,7 @@ function reconcile(context, root) {
       throw new Error('merge journal path is unsafe');
     const body = [
       '---',
-      `pr: ${JSON.stringify(pullUrl)}`,
+      `pr: '${pullUrl.replaceAll("'", "''")}'`,
       ...(issues.length
         ? [
             `issue: ${JSON.stringify(issues[0].url)}`,
