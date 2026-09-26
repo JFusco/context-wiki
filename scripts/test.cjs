@@ -716,6 +716,51 @@ test("merge reconciliation adds every closing issue to an existing journal", () 
   assert.deepEqual(reconcile(context, root), []);
 });
 
+test("merge reconciliation ignores formatting-only historical journals", () => {
+  const root = makeGit("merge-file-status", "git@github.com:example/repo.git"); assert.equal(init(root).status, 0);
+  const history = path.join(root, "wiki/journal/history.md");
+  const pending = path.join(root, "wiki/journal/pending.md");
+  const added = path.join(root, "wiki/journal/added.md");
+  const historicalText = "---\npr: https://github.com/example/repo/pull/1\nissue: https://github.com/example/repo/issues/1\ntopics: []\nplans: []\n---\n\n# History\n";
+  write(history, historicalText);
+  write(pending, "---\npr: pending\ntopics: []\nplans: []\n---\n\n# Pending\n");
+  write(added, "---\npr: pending\ntopics: []\nplans: []\n---\n\n# Added\n");
+  const { reconcile } = require(path.join(root, "scripts/wiki/on-merge-sync.cjs"));
+  const context = {
+    schemaVersion: 1,
+    repository: "example/repo",
+    number: 44,
+    title: "Format and document",
+    body: "Closes #102",
+    url: "https://github.com/example/repo/pull/44",
+    mergedAt: "2026-01-04T00:00:00Z",
+    changedFiles: [
+      { path: "src/runtime.js", status: "modified" },
+      { path: "wiki/journal/history.md", status: "modified" },
+      { path: "wiki/journal/pending.md", status: "modified" },
+      { path: "wiki/journal/added.md", status: "added" },
+    ],
+    changedPaths: [
+      "src/runtime.js",
+      "wiki/journal/history.md",
+      "wiki/journal/pending.md",
+      "wiki/journal/added.md",
+    ],
+    commits: [],
+  };
+  assert.deepEqual(reconcile(context, root), [
+    "wiki/journal/added.md",
+    "wiki/journal/pending.md",
+  ]);
+  assert.equal(fs.readFileSync(history, "utf8"), historicalText);
+  for (const journal of [pending, added]) {
+    const text = fs.readFileSync(journal, "utf8");
+    assert.match(text, /pr: https:\/\/github\.com\/example\/repo\/pull\/44/);
+    assert.match(text, /issues\/102/);
+  }
+  assert.deepEqual(reconcile(context, root), []);
+});
+
 test("issue refresh scopes Open threads, caches lookups, and owns only its trailing marker", () => {
   const root = temp("issue-refresh"); assert.equal(init(root).status, 0);
   const modulePath = path.join(root, "scripts/wiki/refresh-issue-state.cjs");

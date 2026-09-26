@@ -37,6 +37,9 @@ function main() {
     fs.readFileSync(path.join(root, ".github/workflows/wiki-issue-sync.yml"), "utf8"),
   ];
   if (!wikiWorkflows[1].includes("scripts/wiki/reconcile-merges.cjs") || !wikiWorkflows[1].includes("pr_number:") || !wikiWorkflows[1].includes("since:") || !wikiWorkflows[1].includes("gh api --method PATCH")) errors.push("Sync context wiki must support REST-based single and batch reconciliation");
+  const mergeReconciler = fs.readFileSync(path.join(root, "scripts/wiki/reconcile-merges.cjs"), "utf8");
+  const mergeWriter = fs.readFileSync(path.join(root, "scripts/wiki/on-merge-sync.cjs"), "utf8");
+  if (!mergeReconciler.includes("changedFiles:") || !mergeWriter.includes("item.status !== 'added'")) errors.push("merge reconciliation must distinguish added journals from formatting-only modifications");
   for (const workflow of [qualityWorkflow, commitlintWorkflow, ...wikiWorkflows]) {
     if (!workflow.includes('FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true') || !workflow.includes('node-version: "24.14.0"')) errors.push("every canonical workflow must use Node 24.14.0");
   }
