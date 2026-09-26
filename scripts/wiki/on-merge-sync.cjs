@@ -109,18 +109,42 @@ function normalizeCommits(context) {
   });
 }
 
+function renderFrontmatterField(key, rendered) {
+  return `${key}:${rendered.startsWith('\n') ? '' : ' '}${rendered}`;
+}
+
 function setFrontmatterField(text, key, rendered) {
   const parsed = splitFrontmatter(text);
   if (!parsed.full) return text;
   const lines = parsed.raw.split(/\r?\n/);
   const span = fieldSpan(parsed.raw, key);
-  if (!span) lines.push(`${key}: ${rendered}`);
+  const field = renderFrontmatterField(key, rendered);
+  if (!span) lines.push(field);
   else {
     if (!span.valid)
       throw new Error(`cannot rewrite malformed frontmatter list for ${key}`);
-    lines.splice(span.start, span.end - span.start, `${key}: ${rendered}`);
+    lines.splice(span.start, span.end - span.start, field);
   }
   return `---\n${lines.join('\n')}\n---\n${parsed.body}`;
+}
+
+function quoteYaml(value) {
+  return `'${String(value).replaceAll("'", "''")}'`;
+}
+
+function renderFlowList(key, values) {
+  const items = values.map(quoteYaml);
+  const inline = `[${items.join(', ')}]`;
+  if (`${key}: ${inline}`.length <= 80) return inline;
+  return `\n  [\n${items.map(item => `    ${item},`).join('\n')}\n  ]`;
+}
+
+function markdownCode(value) {
+  const text = String(value);
+  const runs = text.match(/`+/g) || [];
+  const delimiter = '`'.repeat(1 + Math.max(0, ...runs.map(run => run.length)));
+
+  return `${delimiter}${text}${delimiter}`;
 }
 
 function mergeIssueEvidence(text, issues) {
@@ -142,18 +166,8 @@ function mergeIssueEvidence(text, issues) {
     urls.push(url);
   }
   let updated = text;
-  if (
-    !current ||
-    /^(?:pending|tbd|none)$/i.test(current) ||
-    normalizeGithubQuery(current) !== current
-  ) {
-    updated = setFrontmatterField(updated, 'issue', JSON.stringify(urls[0]));
-  }
-  return setFrontmatterField(
-    updated,
-    'issues',
-    `[${urls.map(item => JSON.stringify(item)).join(', ')}]`,
-  );
+  updated = setFrontmatterField(updated, 'issue', quoteYaml(urls[0]));
+  return setFrontmatterField(updated, 'issues', renderFlowList('issues', urls));
 }
 
 function reconcile(context, root) {
@@ -268,11 +282,17 @@ function reconcile(context, root) {
       throw new Error('merge journal path is unsafe');
     const body = [
       '---',
-      `pr: '${pullUrl.replaceAll("'", "''")}'`,
+      `pr: ${quoteYaml(pullUrl)}`,
       ...(issues.length
         ? [
-            `issue: ${JSON.stringify(issues[0].url)}`,
-            `issues: [${issues.map(item => JSON.stringify(item.url)).join(', ')}]`,
+            `issue: ${quoteYaml(issues[0].url)}`,
+            renderFrontmatterField(
+              'issues',
+              renderFlowList(
+                'issues',
+                issues.map(item => item.url),
+              ),
+            ),
           ]
         : []),
       'topics: []',
@@ -294,7 +314,7 @@ function reconcile(context, root) {
       '',
       '## Files',
       '',
-      ...files.slice(0, 20).map(item => `- ${item}`),
+      ...files.slice(0, 20).map(item => `- ${markdownCode(item)}`),
       '',
     ].join('\n');
     if (!fs.existsSync(file)) {
@@ -310,7 +330,7 @@ function reconcile(context, root) {
     const original = fs.readFileSync(file, 'utf8');
     let updated = original.replace(
       /^(\s*(?:pr|follow_up_pr)):\s*(?:pending|TBD)\s*$/gim,
-      `$1: ${pullUrl}`,
+      `$1: ${quoteYaml(pullUrl)}`,
     );
     updated = mergeIssueEvidence(updated, issues);
     if (updated !== original) {

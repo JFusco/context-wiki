@@ -666,7 +666,7 @@ test("audit-plan-candidates infers plan dates from delivery evidence and sources
 test("merge and issue helpers are deterministic", () => {
   const root = makeGit("helpers", "git@github.com:example/repo.git"); assert.equal(init(root).status, 0);
   const { reconcile } = require(path.join(root, "scripts/wiki/on-merge-sync.cjs"));
-  const context = { schemaVersion: 1, repository: "example/repo", number: 42, title: "Add runtime", body: "Mentions https://github.com/example/ignored/issues/99. Fixes #7. Resolves example/other#7. Closes https://github.com/example/third/issues/8.", url: "https://github.com/example/repo/pull/42", mergedAt: "2026-01-02T00:00:00Z", changedPaths: ["src/runtime.js"], commits: [{ hash: "abc123", subject: "Add deterministic runtime" }] };
+  const context = { schemaVersion: 1, repository: "example/repo", number: 42, title: "Add runtime", body: "Mentions https://github.com/example/ignored/issues/99. Fixes #7. Resolves example/other#7. Closes https://github.com/example/third/issues/8.", url: "https://github.com/example/repo/pull/42", mergedAt: "2026-01-02T00:00:00Z", changedPaths: ["src/__tests__/runtime.test.js"], commits: [{ hash: "abc123", subject: "Add deterministic runtime" }] };
   assert.equal(reconcile(context, root).length, 1); assert.equal(reconcile(context, root).length, 0);
   const { CLOSED_SUFFIX, issueRefs, markClosed, setIssueState } = require(path.join(root, "scripts/wiki/refresh-issue-state.cjs"));
   const issue = "https://github.com/example/repo/issues/7";
@@ -677,10 +677,12 @@ test("merge and issue helpers are deterministic", () => {
   assert.equal(setIssueState(`[authored](${issue}) — closed`, issue, "closed"), `[authored](${issue}) — closed`);
   assert.equal(setIssueState(`[authored](${issue}) — closed`, issue, "open"), `[authored](${issue}) — closed`);
   const journal = fs.readFileSync(path.join(root, "wiki/journal/2026-01-02-pr-42-add-runtime.md"), "utf8");
-  assert.match(journal, /issue: "https:\/\/github\.com\/example\/repo\/issues\/7"/);
-  assert.match(journal, /issues: \["https:\/\/github\.com\/example\/repo\/issues\/7", "https:\/\/github\.com\/example\/other\/issues\/7", "https:\/\/github\.com\/example\/third\/issues\/8"\]/);
+  assert.match(journal, /^issue: 'https:\/\/github\.com\/example\/repo\/issues\/7'$/m);
+  assert.match(journal, /^issues:\n {2}\[\n/m);
+  assert.match(journal, / {4}'https:\/\/github\.com\/example\/other\/issues\/7',/);
   assert.doesNotMatch(journal, /ignored\/issues\/99/);
   assert.match(journal, /Add deterministic runtime/);
+  assert.match(journal, /- `src\/__tests__\/runtime\.test\.js`/);
   assert.equal(issueRefs("https://evil.example/github.com/example/repo/issues/8").length, 0);
   assert.throws(() => reconcile({ ...context, number: "../../escape" }, root), /positive/);
   const escaped = path.join(root, ".github", "escaped.md");
@@ -711,8 +713,10 @@ test("merge reconciliation adds every closing issue to an existing journal", () 
   const context = { number: 43, title: "Existing", body: "Fixes #2. Resolves example/other#2.", url: "https://github.com/example/repo/pull/43", merged_at: "2026-01-03T00:00:00Z", files: ["src/runtime.js", "wiki/journal/existing.md"], commits: [] };
   assert.deepEqual(reconcile(context, root), ["wiki/journal/existing.md"]);
   const text = fs.readFileSync(journal, "utf8");
-  assert.match(text, /pr: https:\/\/github\.com\/example\/repo\/pull\/43/);
-  assert.match(text, /issues: \["https:\/\/github\.com\/example\/legacy\/issues\/1", "https:\/\/github\.com\/example\/repo\/issues\/2", "https:\/\/github\.com\/example\/other\/issues\/2"\]/);
+  assert.match(text, /^pr: 'https:\/\/github\.com\/example\/repo\/pull\/43'$/m);
+  assert.match(text, /^issue: 'https:\/\/github\.com\/example\/legacy\/issues\/1'$/m);
+  assert.match(text, /^issues:\n {2}\[\n/m);
+  assert.match(text, / {4}'https:\/\/github\.com\/example\/other\/issues\/2',/);
   assert.deepEqual(reconcile(context, root), []);
 });
 
@@ -755,7 +759,7 @@ test("merge reconciliation ignores formatting-only historical journals", () => {
   assert.equal(fs.readFileSync(history, "utf8"), historicalText);
   for (const journal of [pending, added]) {
     const text = fs.readFileSync(journal, "utf8");
-    assert.match(text, /pr: https:\/\/github\.com\/example\/repo\/pull\/44/);
+    assert.match(text, /^pr: 'https:\/\/github\.com\/example\/repo\/pull\/44'$/m);
     assert.match(text, /issues\/102/);
   }
   assert.deepEqual(reconcile(context, root), []);
