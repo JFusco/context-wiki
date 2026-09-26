@@ -3,8 +3,6 @@ name: Wiki integrity
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
   workflow_dispatch: {}
 
 permissions:
@@ -29,9 +27,5 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "24.14.0"
-      - name: Enable declared pnpm via Corepack
-        run: corepack enable && corepack install
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
       - name: Validate wiki
-        run: pnpm run wiki:check
+        run: node scripts/wiki/check.cjs

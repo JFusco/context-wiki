@@ -16,6 +16,7 @@ const frontmatter = require(path.join(WIKI_SCRIPTS, "lib", "frontmatter.cjs"));
 const plans = require(path.join(WIKI_SCRIPTS, "lib", "plans.cjs"));
 const github = require(path.join(WIKI_SCRIPTS, "lib", "github-refs.cjs"));
 const routing = require(path.join(WIKI_SCRIPTS, "routing.cjs"));
+const merges = require(path.join(WIKI_SCRIPTS, "reconcile-merges.cjs"));
 const installer = require(path.join(SKILL, "scripts", "init-repository.cjs"));
 
 function temp(t, name) {
@@ -100,6 +101,59 @@ test("common resolves Git roots and GitHub remote slugs", (t) => {
   assert.equal(common.remoteSlug(root), "");
 });
 
+test("merge reconciliation parses single, batch, and default lookback requests", () => {
+  assert.deepEqual(merges.parseArgs(["--pr", "42", "--repository", "example/repo"]), {
+    dryRun: false, pr: "42", repository: "example/repo", base: "main",
+  });
+  assert.equal(merges.parseArgs([], new Date("2026-09-25T12:00:00Z")).since, "2026-06-27");
+  assert.throws(() => merges.parseArgs(["--pr", "42", "--since", "2026-09-01"]), /mutually exclusive/);
+  assert.throws(() => merges.parseArgs(["--since", "2026-02-30"]), /real calendar date/);
+  assert.deepEqual(merges.flattenPages([[{ number: 1 }], [{ number: 2 }]]), [{ number: 1 }, { number: 2 }]);
+});
+
+test("merge reconciliation orders merged PRs and excludes wiki bot branches", () => {
+  const pulls = [
+    { number: 3, merged_at: "2026-09-03T10:00:00Z", head: { ref: "feature/three" } },
+    { number: 1, merged_at: "2026-08-31T10:00:00Z", head: { ref: "feature/old" } },
+    { number: 2, merged_at: "2026-09-02T10:00:00Z", head: { ref: "bot/wiki-maintenance" } },
+    { number: 4, merged_at: "2026-09-02T10:00:00Z", head: { ref: "feature/four" } },
+  ];
+  assert.deepEqual(merges.selectMergedPulls(pulls, "2026-09-01").map((pull) => pull.number), [4, 3]);
+});
+
+test("batch reconciliation is idempotent, supports dry runs, and surfaces API failures", (t) => {
+  const root = makeGit(t, "merge-reconcile");
+  write(path.join(root, "wiki", "INDEX.md"), "# Wiki\n");
+  write(path.join(root, "wiki", "journal", ".gitkeep"), "");
+  const pull = {
+    number: 7, title: "Add the runtime", body: "", html_url: "https://github.com/example/repo/pull/7",
+    merged_at: "2026-09-02T10:00:00Z", head: { ref: "feature/runtime" },
+  };
+  const request = (endpoint) => {
+    if (endpoint.includes("/files")) return [{ filename: "src/runtime.cjs" }];
+    if (endpoint.includes("/commits")) return [{ sha: "abc123", commit: { message: "feat: add runtime\n\nBody" } }];
+    if (endpoint.includes("/pulls?")) return [pull];
+    throw new Error(`unexpected endpoint ${endpoint}`);
+  };
+  const options = { repo: root, repository: "example/repo", base: "main", since: "2026-09-01", dryRun: false, request };
+  const first = merges.reconcilePulls(options);
+  assert.equal(first.changed, 1);
+  assert.equal(first.errors, 0);
+  const created = fs.readdirSync(path.join(root, "wiki", "journal")).filter((name) => name.endsWith(".md"));
+  assert.equal(created.length, 1);
+  const second = merges.reconcilePulls(options);
+  assert.equal(second.changed, 0);
+  assert.equal(second.unchanged, 1);
+  fs.unlinkSync(path.join(root, "wiki", "journal", created[0]));
+  const dry = merges.reconcilePulls({ ...options, dryRun: true });
+  assert.equal(dry.changed, 1);
+  assert.equal(fs.readdirSync(path.join(root, "wiki", "journal")).filter((name) => name.endsWith(".md")).length, 0);
+  assert.throws(() => merges.reconcilePulls({ ...options, request: (endpoint, apiOptions) => {
+    if (endpoint.includes("/pulls?")) return request(endpoint, apiOptions);
+    throw new Error("API unavailable");
+  } }), (error) => error.summary?.errors === 1 && /failed for 1/.test(error.message));
+});
+
 test("frontmatter splits BOM-prefixed CRLF documents", () => {
   const parsed = frontmatter.splitFrontmatter("\uFEFF---\r\ntitle: \"Demo\"\r\ntopics: [\"one\", \"two\"]\r\n---\r\n# Body\r\n");
   assert.equal(frontmatter.scalar(parsed.raw, "title"), "Demo");
@@ -125,6 +179,22 @@ test("frontmatter reads scalar, inline, fallback, and block lists", () => {
   assert.deepEqual(frontmatter.list(raw, "fallback"), ["one", "two"]);
   assert.deepEqual(frontmatter.list(raw, "single"), ["team"]);
   assert.deepEqual(frontmatter.list(raw, "missing"), []);
+});
+
+test("frontmatter validates duplicate and malformed bracket-list fields", () => {
+  assert.deepEqual(frontmatter.frontmatterProblems("issues: []\nissues: []"), [
+    'duplicate frontmatter field "issues"',
+  ]);
+  assert.deepEqual(frontmatter.frontmatterProblems("topics:\n  [\n    \"one\""), [
+    'unterminated bracket list for "topics"',
+  ]);
+  assert.deepEqual(frontmatter.frontmatterProblems("  [\n  ]"), [
+    "orphaned bracket list at line 1",
+  ]);
+  assert.deepEqual(frontmatter.list("topics:\n  [\n    \"one\",\n    \"two\"\n  ]", "topics"), ["one", "two"]);
+  assert.deepEqual(frontmatter.fieldSpan("topics:\n  - one\n  - two\nissue: pending", "topics"), {
+    start: 0, end: 3, kind: "dash-list", valid: true,
+  });
 });
 
 test("frontmatter renders deterministic metadata and titles", () => {

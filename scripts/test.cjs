@@ -51,11 +51,13 @@ test("package manifest exposes the Sigma graph workflow", () => {
     assert.ok(fs.existsSync(path.join(SKILL, relative)), relative);
   }
   const prWorkflow = fs.readFileSync(path.join(SKILL, ".github/workflows/pr.yml"), "utf8");
-  assert.match(prWorkflow, /- bot\/wiki-\*\*/);
-  assert.match(prWorkflow, /if: \$\{\{ !startsWith\(github\.ref_name, 'bot\/wiki-'\) \}\}/);
+  assert.match(prWorkflow, /workflow_dispatch:/);
+  assert.doesNotMatch(prWorkflow, /\n\s+push:/);
   const quality = fs.readFileSync(path.join(SKILL, ".github/workflows/quality.yml"), "utf8");
   assert.match(quality, /fetch-depth: 0/);
   assert.match(quality, /run: pnpm run verify:ci/);
+  assert.match(quality, /wiki\/\*\|scripts\/wiki\/graph\/data\/graph\.json/);
+  assert.match(quality, /github\.event\.pull_request\.draft/);
   assert.doesNotMatch(quality, /run: pnpm (?:run )?validate/);
 });
 
@@ -238,46 +240,43 @@ test("Git initialization installs workflows and dispatches a legacy hook", () =>
   const issueSync = fs.readFileSync(path.join(root, ".github/workflows/wiki-issue-sync.yml"), "utf8");
   assert.match(check, /^name: Wiki integrity$/m);
   assert.match(check, /pull_request:\n    branches: \[main\]/);
-  assert.match(check, /push:\n    branches: \[main\]/);
+  assert.doesNotMatch(check, /\n\s+push:/);
   assert.match(check, /workflow_dispatch: \{\}/);
   assert.match(check, /jobs:\n  check:/);
   assert.match(check, /group: wiki-integrity-/);
   assert.match(check, /fetch-depth: 0/);
   assert.doesNotMatch(check, /pull-requests: read/);
-  assert.equal((check.match(/pnpm run wiki:check/g) || []).length, 1);
-  assert.equal((check.match(/run: pnpm run /g) || []).length, 1);
-  assert.doesNotMatch(check, /scripts\/wiki\/check\.cjs|gh api/);
+  assert.equal((check.match(/node scripts\/wiki\/check\.cjs/g) || []).length, 1);
+  assert.doesNotMatch(check, /pnpm|corepack|gh api/);
   assert.match(sync, /^name: Sync context wiki$/m);
   assert.match(issueSync, /^name: Sync wiki issue state$/m);
   assert.doesNotMatch(sync, /slack|@verndale\/ai-pr/i);
   for (const workflow of [check, sync, issueSync]) {
     assert.match(workflow, /node-version: "24\.14\.0"/);
-    assert.match(workflow, /corepack enable && corepack install/);
-    assert.match(workflow, /pnpm install --frozen-lockfile/);
+    assert.doesNotMatch(workflow, /corepack|pnpm install|playwright install/i);
   }
   for (const workflow of [sync, issueSync]) {
     assert.match(workflow, /GRAPHIFY_SKIP_HOOK: "1"/);
     assert.match(workflow, /persist-credentials: false/);
-    assert.match(workflow, /gh auth setup-git/);
     assert.match(workflow, /PR_BOT_TOKEN/);
     assert.match(workflow, /jobs:\n  sync:/);
     assert.match(workflow, /--force-with-lease/);
-    assert.match(workflow, /gh pr reopen/);
+    assert.match(workflow, /gh api --method PATCH/);
+    assert.doesNotMatch(workflow, /gh pr /);
     assert.match(workflow, /github-actions\[bot\]/);
     assert.match(workflow, /41898282\+github-actions\[bot\]@users\.noreply\.github\.com/);
   }
-  assert.match(sync, /workflow_dispatch:\n    inputs:\n      pr_number:/);
-  assert.match(sync, /files\?per_page=100.*--paginate --slurp/);
-  assert.match(sync, /commits\?per_page=100.*--paginate --slurp/);
-  assert.match(sync, /--arg repository "\$GITHUB_REPOSITORY"/);
-  assert.match(sync, /\{schemaVersion: 1, repository: \$repository,[^\n]+mergedAt: \$pr\.merged_at, changedPaths: \$files, commits: \$commits\}/);
-  assert.doesNotMatch(sync, /\{[^\n]*merged_at: \$pr\.merged_at|\{[^\n]*files: \$files/);
+  assert.match(sync, /workflow_dispatch:\n    inputs:\n      pr_number:[\s\S]+since:/);
+  assert.match(sync, /scripts\/wiki\/reconcile-merges\.cjs/);
+  assert.match(sync, /pr_number and since are mutually exclusive/);
   assert.match(sync, /branch="bot\/wiki-sync\/\$PR_NUMBER"/);
-  assert.match(sync, /group: wiki-sync-\$\{\{ inputs\.pr_number \|\| github\.event\.pull_request\.number \}\}/);
-  assert.match(sync, /PR_NUMBER: \$\{\{ inputs\.pr_number \|\| github\.event\.pull_request\.number \}\}/);
+  assert.match(sync, /bot\/wiki-maintenance/);
+  assert.match(sync, /group: wiki-sync-\$\{\{ inputs\.pr_number \|\| inputs\.since \|\| github\.event\.pull_request\.number \|\| 'batch' \}\}/);
+  assert.match(sync, /PR_NUMBER: \$\{\{ inputs\.pr_number \|\| github\.event\.pull_request\.number \|\| '' \}\}/);
   assert.match(sync, /bot\/wiki-\*\)/);
-  assert.match(issueSync, /cron: "30 11 \* \* \*" # Daily at 11:30 UTC/);
-  assert.match(issueSync, /workflow_dispatch: \{\}/);
+  assert.match(issueSync, /cron: "30 11 \* \* 1" # Mondays at 11:30 UTC/);
+  assert.match(issueSync, /workflow_dispatch:\n    inputs:\n      since:/);
+  assert.match(issueSync, /scripts\/wiki\/reconcile-merges\.cjs/);
   git(root, ["add", "."]);
   const committed = run("git", ["commit", "-m", "wiki bootstrap"], { cwd: root, env: { WIKI_HOME: temp("hook-home") } });
   assert.equal(committed.status, 0, committed.stderr); assert.match(`${committed.stdout}${committed.stderr}`, /legacy/);

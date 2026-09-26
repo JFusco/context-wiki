@@ -7,21 +7,26 @@ on:
     inputs:
       pr_number:
         description: "Merged pull request number to replay"
-        required: true
-        type: number
+        required: false
+        type: string
+      since:
+        description: "Reconcile merged pull requests since YYYY-MM-DD (defaults to 90 days)"
+        required: false
+        type: string
 
 permissions:
   contents: read
   pull-requests: read
 
 concurrency:
-  group: wiki-sync-${{ inputs.pr_number || github.event.pull_request.number }}
+  group: wiki-sync-${{ inputs.pr_number || inputs.since || github.event.pull_request.number || 'batch' }}
   cancel-in-progress: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   GRAPHIFY_SKIP_HOOK: "1"
-  PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
+  PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number || '' }}
+  SINCE: ${{ inputs.since || '' }}
 
 jobs:
   sync:
@@ -32,74 +37,95 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.PR_BOT_TOKEN }}
     steps:
-      - name: Require bot token
-        run: |
-          test -n "$GH_TOKEN" || { echo 'PR_BOT_TOKEN is required'; exit 1; }
-          gh auth setup-git
-      - name: Resolve merged PR context
+      - name: Validate request and credentials
         id: context
         run: |
-          pr="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
-          merged_at="$(jq -r '.merged_at // empty' <<<"$pr")"
-          head_ref="$(jq -r '.head.ref' <<<"$pr")"
-          test -n "$merged_at" || { echo "PR #$PR_NUMBER is not merged"; exit 1; }
-          case "$head_ref" in bot/wiki-*) echo 'Wiki bot PRs are not replayed'; exit 1;; esac
-          base_ref="$(jq -r '.base.ref' <<<"$pr")"
-          files="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files?per_page=100" --paginate --slurp | jq -c '[.[][] | .filename]')"
-          commits="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/commits?per_page=100" --paginate --slurp | jq -c '[.[][] | {hash: .sha, subject: (.commit.message | split("\n")[0])}]')"
-          jq -n --arg repository "$GITHUB_REPOSITORY" --argjson pr "$pr" --argjson files "$files" --argjson commits "$commits" \
-            '{schemaVersion: 1, repository: $repository, number: $pr.number, title: $pr.title, body: ($pr.body // ""), url: $pr.html_url, mergedAt: $pr.merged_at, changedPaths: $files, commits: $commits}' \
-            > "$RUNNER_TEMP/wiki-merge.json"
-          echo "base_branch=$base_ref" >> "$GITHUB_OUTPUT"
+          test -n "$GH_TOKEN" || { echo 'PR_BOT_TOKEN is required'; exit 1; }
+          gh api rate_limit >/dev/null
+          if [ -n "$PR_NUMBER" ] && [ -n "$SINCE" ]; then
+            echo 'pr_number and since are mutually exclusive'
+            exit 1
+          fi
+          if [ -n "$PR_NUMBER" ]; then
+            pr="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
+            test -n "$(jq -r '.merged_at // empty' <<<"$pr")" || { echo "PR #$PR_NUMBER is not merged"; exit 1; }
+            case "$(jq -r '.head.ref' <<<"$pr")" in bot/wiki-*) echo 'Wiki bot PRs are not replayed'; exit 1;; esac
+            base="$(jq -r '.base.ref' <<<"$pr")"
+          else
+            base="$(gh api "repos/$GITHUB_REPOSITORY" --jq '.default_branch')"
+          fi
+          echo "base=$base" >> "$GITHUB_OUTPUT"
       - name: Checkout merged base
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.context.outputs.base_branch }}
+          ref: ${{ steps.context.outputs.base }}
           fetch-depth: 0
           persist-credentials: false
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "24.14.0"
-      - name: Enable declared pnpm via Corepack
-        run: corepack enable && corepack install
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
       - name: Reconcile wiki
         id: reconcile
+        env:
+          BASE_BRANCH: ${{ steps.context.outputs.base }}
         run: |
-          node scripts/wiki/on-merge-sync.cjs --context "$RUNNER_TEMP/wiki-merge.json"
+          args=(--repository "$GITHUB_REPOSITORY" --base "$BASE_BRANCH")
+          if [ -n "$PR_NUMBER" ]; then args+=(--pr "$PR_NUMBER"); fi
+          if [ -n "$SINCE" ]; then args+=(--since "$SINCE"); fi
+          set +e
+          node scripts/wiki/reconcile-merges.cjs "${args[@]}" | tee "$RUNNER_TEMP/wiki-reconcile-summary.json"
+          reconcile_status="${PIPESTATUS[0]}"
+          set -e
+          {
+            echo '### Wiki reconciliation'
+            jq -r '"- Processed: \(.processed)\n- Changed: \(.changed)\n- Unchanged: \(.unchanged)\n- Errors: \(.errors)"' "$RUNNER_TEMP/wiki-reconcile-summary.json"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$reconcile_status" != '0' ]; then exit "$reconcile_status"; fi
           node scripts/wiki/build-graph.cjs
           node scripts/wiki/check.cjs
           if [ -z "$(git status --porcelain -- wiki scripts/wiki/graph/data/graph.json)" ]; then
             echo 'changed=false' >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          branch="bot/wiki-sync/$PR_NUMBER"
+          if [ -n "$PR_NUMBER" ]; then branch="bot/wiki-sync/$PR_NUMBER"; else branch='bot/wiki-maintenance'; fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git checkout -B "$branch"
           git add wiki scripts/wiki/graph/data/graph.json
-          git commit -m "docs(wiki): reconcile merged PR #$PR_NUMBER"
+          proposed_tree="$(git write-tree)"
           git fetch origin "refs/heads/$branch:refs/remotes/origin/$branch" || true
-          git push --force-with-lease origin "HEAD:refs/heads/$branch"
+          remote_tree="$(git rev-parse "refs/remotes/origin/$branch^{tree}" 2>/dev/null || true)"
+          if [ -n "$remote_tree" ] && [ "$proposed_tree" = "$remote_tree" ]; then
+            echo 'Reusing the existing maintenance commit because its proposed content is unchanged.'
+          else
+            if [ -n "$PR_NUMBER" ]; then subject="docs(wiki): reconcile merged PR #$PR_NUMBER [skip release]"; else subject='docs(wiki): reconcile missed merges [skip release]'; fi
+            HUSKY=0 GRAPHIFY_SKIP_HOOK=1 git commit -m "$subject"
+            HUSKY=0 GRAPHIFY_SKIP_HOOK=1 git push --force-with-lease origin "HEAD:refs/heads/$branch"
+          fi
           echo 'changed=true' >> "$GITHUB_OUTPUT"
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
       - name: Open, update, or reopen review PR
         if: steps.reconcile.outputs.changed == 'true'
         env:
-          BASE_BRANCH: ${{ steps.context.outputs.base_branch }}
+          BASE_BRANCH: ${{ steps.context.outputs.base }}
           BRANCH: ${{ steps.reconcile.outputs.branch }}
         run: |
-          title="docs(wiki): reconcile PR #$PR_NUMBER"
-          body="Automated, reviewable wiki reconciliation for merged PR #$PR_NUMBER."
-          open="$(gh pr list --head "$BRANCH" --state open --limit 100 --json number --jq 'sort_by(.number) | last | .number // empty')"
-          closed="$(gh pr list --head "$BRANCH" --state closed --limit 100 --json number,mergedAt --jq 'map(select(.mergedAt == null)) | sort_by(.number) | last | .number // empty')"
-          if [ -n "$open" ]; then
-            gh pr edit "$open" --title "$title" --body "$body"
-          elif [ -n "$closed" ]; then
-            gh pr reopen "$closed"
-            gh pr edit "$closed" --title "$title" --body "$body"
+          owner="${GITHUB_REPOSITORY%%/*}"
+          if [ -n "$PR_NUMBER" ]; then
+            title="docs(wiki): reconcile PR #$PR_NUMBER"
+            body="Automated, reviewable wiki reconciliation for merged PR #$PR_NUMBER."
           else
-            gh pr create --base "$BASE_BRANCH" --head "$BRANCH" --title "$title" --body "$body"
+            title='docs(wiki): reconcile missed merges'
+            counts="$(jq -r '"Processed \(.processed) merged PRs: \(.changed) changed, \(.unchanged) unchanged, \(.errors) errors."' "$RUNNER_TEMP/wiki-reconcile-summary.json")"
+            body="Automated, reviewable batch wiki reconciliation. $counts"
           fi
+          pulls="$(gh api --method GET "repos/$GITHUB_REPOSITORY/pulls" -f state=all -f head="$owner:$BRANCH" -f base="$BASE_BRANCH" -f per_page=100)"
+          number="$(jq -r 'map(select(.state == "open")) | sort_by(.number) | last | .number // empty' <<<"$pulls")"
+          if [ -z "$number" ]; then number="$(jq -r 'map(select(.state == "closed" and .merged_at == null)) | sort_by(.number) | last | .number // empty' <<<"$pulls")"; fi
+          if [ -n "$number" ]; then
+            result="$(gh api --method PATCH "repos/$GITHUB_REPOSITORY/pulls/$number" -f state=open -f title="$title" -f body="$body")"
+          else
+            result="$(gh api --method POST "repos/$GITHUB_REPOSITORY/pulls" -f base="$BASE_BRANCH" -f head="$BRANCH" -f title="$title" -f body="$body")"
+          fi
+          echo "- Review PR: $(jq -r '.html_url' <<<"$result")" >> "$GITHUB_STEP_SUMMARY"
