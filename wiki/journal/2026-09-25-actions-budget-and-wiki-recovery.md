@@ -2,8 +2,9 @@
 date: 2026-09-25
 topics: [repository-automation]
 plans: [2026-09-26-reduce-actions-usage-and-recover-wiki-synchronization-a7e32708e7.md]
-issue: https://github.com/JFusco/context-wiki/issues/13
+issue: "https://github.com/jfusco/context-wiki/issues/13"
 pr: https://github.com/JFusco/context-wiki/pull/14
+issues: ["https://github.com/jfusco/context-wiki/issues/13"]
 ---
 # Reduce Actions usage and make wiki recovery repeatable
 
