@@ -9,6 +9,7 @@ const { repoRoot, remoteSlug } = require("./lib/common.cjs");
 const { reconcile } = require("./on-merge-sync.cjs");
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const GH_RESPONSE_BUFFER_BYTES = 64 * 1024 * 1024;
 
 function parseArgs(argv, now = new Date()) {
   const options = { dryRun: false };
@@ -42,7 +43,11 @@ function flattenPages(value) {
 function githubRequest(endpoint, { paginate = false } = {}) {
   const args = ["api", endpoint];
   if (paginate) args.push("--paginate", "--slurp");
-  const output = execFileSync("gh", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  const output = execFileSync("gh", args, {
+    encoding: "utf8",
+    maxBuffer: GH_RESPONSE_BUFFER_BYTES,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
   const parsed = JSON.parse(output);
 
   return paginate ? flattenPages(parsed) : parsed;
