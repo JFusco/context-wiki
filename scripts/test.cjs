@@ -257,7 +257,8 @@ test("Git initialization installs workflows and dispatches a legacy hook", () =>
   }
   for (const workflow of [sync, issueSync]) {
     assert.match(workflow, /GRAPHIFY_SKIP_HOOK: "1"/);
-    assert.match(workflow, /persist-credentials: false/);
+    assert.match(workflow, /token: \$\{\{ secrets\.PR_BOT_TOKEN \}\}/);
+    assert.doesNotMatch(workflow, /persist-credentials: false/);
     assert.match(workflow, /PR_BOT_TOKEN/);
     assert.match(workflow, /jobs:\n  sync:/);
     assert.match(workflow, /--force-with-lease/);
