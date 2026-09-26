@@ -74,6 +74,7 @@ function mergeContext(repository, pull, files, commits) {
     body: pull.body || "",
     url: pull.html_url,
     mergedAt: pull.merged_at,
+    changedFiles: files.map((file) => ({ path: file.filename, status: file.status || "modified" })),
     changedPaths: files.map((file) => file.filename),
     commits: commits.map((commit) => ({ hash: commit.sha, subject: String(commit.commit?.message || "").split("\n")[0] })),
   };

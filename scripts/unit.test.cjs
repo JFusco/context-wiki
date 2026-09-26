@@ -121,6 +121,28 @@ test("merge reconciliation orders merged PRs and excludes wiki bot branches", ()
   assert.deepEqual(merges.selectMergedPulls(pulls, "2026-09-01").map((pull) => pull.number), [4, 3]);
 });
 
+test("merge reconciliation preserves GitHub file status for journal attribution", () => {
+  const context = merges.mergeContext(
+    "example/repo",
+    {
+      number: 5,
+      title: "Format and document",
+      body: "",
+      html_url: "https://github.com/example/repo/pull/5",
+      merged_at: "2026-09-02T10:00:00Z",
+    },
+    [
+      { filename: "wiki/journal/history.md", status: "modified" },
+      { filename: "wiki/journal/new.md", status: "added" },
+    ],
+    [],
+  );
+  assert.deepEqual(context.changedFiles, [
+    { path: "wiki/journal/history.md", status: "modified" },
+    { path: "wiki/journal/new.md", status: "added" },
+  ]);
+});
+
 test("batch reconciliation is idempotent, supports dry runs, and surfaces API failures", (t) => {
   const root = makeGit(t, "merge-reconcile");
   write(path.join(root, "wiki", "INDEX.md"), "# Wiki\n");

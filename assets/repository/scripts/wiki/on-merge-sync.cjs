@@ -50,6 +50,41 @@ function normalizeChangedPaths(context) {
   });
 }
 
+const FILE_STATUSES = new Set([
+  'added',
+  'changed',
+  'copied',
+  'modified',
+  'removed',
+  'renamed',
+  'unchanged',
+]);
+
+function normalizeChangedFiles(context) {
+  if (context?.changedFiles != null) {
+    if (!Array.isArray(context.changedFiles))
+      throw new Error('merge context changedFiles must be an array');
+    return context.changedFiles.map(value => {
+      if (!value || typeof value !== 'object' || Array.isArray(value))
+        throw new Error('merge context changedFiles require path and status');
+      const status = String(value.status || '').toLowerCase();
+      if (!FILE_STATUSES.has(status))
+        throw new Error(
+          'merge context changedFiles require a GitHub file status',
+        );
+      const [normalized] = normalizeChangedPaths({
+        changedPaths: [value.path],
+      });
+
+      return { path: normalized, status };
+    });
+  }
+  return normalizeChangedPaths(context).map(item => ({
+    path: item,
+    status: null,
+  }));
+}
+
 function normalizeCommits(context) {
   if (context?.commits == null) return [];
   if (!Array.isArray(context.commits))
@@ -141,7 +176,8 @@ function reconcile(context, root) {
     throw new Error(
       'merge context mergedAt must be a parseable ISO date string or null',
     );
-  const files = normalizeChangedPaths(context);
+  const changedFiles = normalizeChangedFiles(context);
+  const files = changedFiles.map(item => item.path);
   const commits = normalizeCommits(context);
   if (
     !Number.isSafeInteger(Number(context.number)) ||
@@ -155,15 +191,25 @@ function reconcile(context, root) {
     'Merged change';
   const journalDir = path.join(root, 'wiki', 'journal');
   const journalFiles = new Set();
-  for (const item of files) {
-    if (!item.startsWith('wiki/journal/') || !item.endsWith('.md')) continue;
-    const target = path.resolve(root, item);
+  for (const item of changedFiles) {
+    const relative = item.path;
+    if (!relative.startsWith('wiki/journal/') || !relative.endsWith('.md'))
+      continue;
+    const target = path.resolve(root, relative);
     if (!ensureInside(journalDir, target) || hasSymlinkComponent(root, target))
-      throw new Error(`unsafe journal path: ${item}`);
+      throw new Error(`unsafe journal path: ${relative}`);
     if (!fs.existsSync(target)) continue;
     if (!fs.lstatSync(target).isFile())
-      throw new Error(`unsafe journal path: ${item}`);
-    journalFiles.add(item);
+      throw new Error(`unsafe journal path: ${relative}`);
+    if (item.status !== null && item.status !== 'added') {
+      const parsed = splitFrontmatter(fs.readFileSync(target, 'utf8'));
+      const pending = [
+        scalar(parsed.raw, 'pr'),
+        scalar(parsed.raw, 'follow_up_pr'),
+      ].some(value => /^(?:pending|tbd)$/i.test(value));
+      if (!pending) continue;
+    }
+    journalFiles.add(relative);
   }
   const provided = parseGithubQuery(context.url);
   const declaredRepository =
