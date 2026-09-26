@@ -3,6 +3,9 @@ name: Quality
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+  push:
+    branches: [main]
   workflow_dispatch: {}
 
 permissions:
@@ -17,6 +20,7 @@ env:
 
 jobs:
   quality:
+    name: Quality
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -27,9 +31,51 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "24.14.0"
+      - name: Classify verification scope
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_DRAFT: ${{ github.event.pull_request.draft || false }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BEFORE_SHA: ${{ github.event.before || '' }}
+        run: |
+          full=true
+          reason='manual dispatch'
+          if [ "$EVENT_NAME" = 'pull_request' ] && [ "$PR_DRAFT" = 'true' ]; then
+            full=false
+            reason='draft pull request'
+          elif [ "$EVENT_NAME" = 'pull_request' ] || [ "$EVENT_NAME" = 'push' ]; then
+            if [ "$EVENT_NAME" = 'push' ]; then BASE_SHA="$BEFORE_SHA"; fi
+            if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = '0000000000000000000000000000000000000000' ] || ! git cat-file -e "${BASE_SHA}^{commit}"; then
+              echo 'full=true' >> "$GITHUB_OUTPUT"
+              echo 'reason=change range unavailable' >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            full=false
+            reason='wiki-only change'
+            changed_files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+            while IFS= read -r file; do
+              case "$file" in
+                wiki/*|scripts/wiki/graph/data/graph.json) ;;
+                *) full=true; reason='substantive change'; break ;;
+              esac
+            done <<< "$changed_files"
+            if [ -z "$changed_files" ]; then full=true; reason='empty change set'; fi
+          fi
+          echo "full=$full" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+      - name: Lightweight verification
+        if: steps.scope.outputs.full != 'true'
+        run: |
+          echo "Full suite skipped: ${{ steps.scope.outputs.reason }}"
+          node scripts/wiki/check.cjs
       - name: Enable pnpm via Corepack
+        if: steps.scope.outputs.full == 'true'
         run: corepack enable && corepack prepare pnpm@10.33.0 --activate
       - name: Install dependencies
+        if: steps.scope.outputs.full == 'true'
         run: pnpm install --frozen-lockfile
       - name: Verify repository
+        if: steps.scope.outputs.full == 'true'
         run: pnpm run verify:ci
