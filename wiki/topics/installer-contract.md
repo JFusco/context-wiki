@@ -15,6 +15,7 @@ Missing `CLAUDE.md` files and files containing additional authored guidance reta
 - Checksum protection for installed assets is unchanged.
 - Managed `AGENTS.md` and pre-commit blocks remain idempotent.
 - The repository-local wiki graph contains Markdown nodes under `wiki/` only.
+- Merge recovery writes single-quoted GitHub references, wraps long flow lists at 80 columns, and code-quotes generated file paths so installed automation stays formatter-stable without application dependencies.
 - A custom root may opt into `--headless-navigation --wiki-root <dir>`; that mode installs route scripts and managed agent traversal only, leaving viewer, committed graph, plan ledger, hooks, workflows, and authored mechanics untouched.
 
 ## Husky 9 dispatch

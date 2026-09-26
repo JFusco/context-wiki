@@ -40,6 +40,7 @@ function main() {
   const mergeReconciler = fs.readFileSync(path.join(root, "scripts/wiki/reconcile-merges.cjs"), "utf8");
   const mergeWriter = fs.readFileSync(path.join(root, "scripts/wiki/on-merge-sync.cjs"), "utf8");
   if (!mergeReconciler.includes("changedFiles:") || !mergeWriter.includes("item.status !== 'added'")) errors.push("merge reconciliation must distinguish added journals from formatting-only modifications");
+  if (!mergeWriter.includes("function quoteYaml") || !mergeWriter.includes("function renderFlowList") || !mergeWriter.includes("function markdownCode")) errors.push("merge reconciliation must emit formatter-stable frontmatter and Markdown paths");
   for (const workflow of [qualityWorkflow, commitlintWorkflow, ...wikiWorkflows]) {
     if (!workflow.includes('FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true') || !workflow.includes('node-version: "24.14.0"')) errors.push("every canonical workflow must use Node 24.14.0");
   }

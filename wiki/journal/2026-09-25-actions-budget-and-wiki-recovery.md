@@ -2,9 +2,9 @@
 date: 2026-09-25
 topics: [repository-automation]
 plans: [2026-09-26-reduce-actions-usage-and-recover-wiki-synchronization-a7e32708e7.md]
-issue: "https://github.com/jfusco/context-wiki/issues/13"
-pr: https://github.com/JFusco/context-wiki/pull/14
-issues: ["https://github.com/jfusco/context-wiki/issues/13"]
+issue: 'https://github.com/jfusco/context-wiki/issues/13'
+pr: 'https://github.com/jfusco/context-wiki/pull/14'
+issues: ['https://github.com/jfusco/context-wiki/issues/13']
 ---
 # Reduce Actions usage and make wiki recovery repeatable
 
@@ -22,6 +22,7 @@ Daily maintenance, duplicate push checks, draft full-suite runs, and dependency 
 - Promoted repository-wide strict frontmatter validation from QA Operations, including complete list-field spans and duplicate or malformed metadata rejection.
 - Added draft and wiki-only lightweight Quality handling, removed the automated PR-helper push trigger, and removed duplicate main-push wiki integrity runs.
 - Updated the installer assets, assertions, documentation, and unit coverage so consumers inherit one portable contract.
+- Live catch-up verification exposed formatter drift in long issue lists and generated paths containing Markdown emphasis markers. The canonical writer now emits the strict, formatter-stable representation directly and the installer contract asserts those helpers are present.
 
 ## Evidence
 
