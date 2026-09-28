@@ -42,16 +42,17 @@ The local viewer starts at <http://127.0.0.1:4173/> and advances to the next ava
 
 ## Repository automation
 
-The canonical checkout uses exact `@verndale/ai-commit@2.7.0` as its sole commit-policy provider and retains exact `@verndale/ai-pr@1.3.5` for its existing generic PR workflow:
+The canonical checkout pins standalone `@commitlint/cli` and
+`@commitlint/config-conventional`. `commitlint.config.cjs` owns the local policy,
+and the tracked `.husky/commit-msg` hook invokes it directly. The `Quality` and
+`Commit message lint` workflows run on Node 24.14.0; Commitlint also validates
+the deterministic pull-request body contract.
 
-```sh
-pnpm exec ai-commit init
-pnpm exec ai-pr init
-```
-
-`commitlint.config.cjs` is the commit-policy provider's one-line export. Because pnpm's strict layout does not expose a transitive binary by default, `pnpm-workspace.yaml` narrowly public-hoists `@commitlint/cli`; `pnpm exec commitlint` then resolves without adding a second direct dependency. The `Quality` and `Commit message lint` workflows run on Node 24.14.0. `Create or update PR` ignores `bot/wiki-**` branches so wiki writers cannot start a second automation loop. Local `.env` files stay ignored; set provider credentials only for the local AI-assisted commands that use them.
-
-Husky 9 dispatches Git hooks through `.husky/_`; the wiki installer attaches its advisory pre-commit block to `.husky/pre-commit`, where the runner can execute it. The wiki writer workflows require the `PR_BOT_TOKEN` repository secret.
+Husky 9 dispatches Git hooks through `.husky/_`; the wiki installer attaches its
+advisory pre-commit block to `.husky/pre-commit`, where the runner can execute it.
+Create issues, commits, branches, and pull requests with ordinary Git and GitHub
+commands following `AGENTS.md`. The wiki writer workflows require the `BOT_TOKEN`
+repository secret.
 
 ## Install globally
 
@@ -187,7 +188,7 @@ When the target is a Git repository with a GitHub `origin`, the installer adds t
 - `Sync context wiki`
 - `Sync wiki issue state`
 
-The two write workflows require a `PR_BOT_TOKEN` repository secret with contents and pull-request write access. They propose reviewable `bot/wiki-*` branches rather than writing directly to the default branch.
+The two write workflows require a `BOT_TOKEN` repository secret with contents and pull-request write access. They propose reviewable `bot/wiki-*` branches rather than writing directly to the default branch.
 
 `Sync context wiki` is merge-event driven and supports manual replay by merged PR number or an optional `since` date; with neither input it inspects the preceding 90 days. It records every same- or cross-repository issue cited with a GitHub closing keyword, merges that evidence into an existing journal when present, and ignores arbitrary or fenced citations. GitHub file status distinguishes newly authored journals from formatting-only edits to historical journals; modified journals are reused only when their PR metadata is pending or already names the merged PR. `Sync wiki issue state` runs Mondays at `30 11 * * 1`, refreshes cited issue state, and runs the same missed-merge audit. Both use dependency-free Node scripts, paginate GitHub REST evidence, suppress unavailable Graphify bot hooks, use authenticated force-with-lease, reuse an unchanged maintenance PR, and reopen an unmerged bot PR when appropriate. `Wiki integrity` also invokes `node scripts/wiki/check.cjs` directly, so portable wiki jobs do not install application dependencies or browsers.
 

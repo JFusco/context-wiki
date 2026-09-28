@@ -1,2 +1,1 @@
-publicHoistPattern:
-  - "@commitlint/cli"
+# Root-only workspace marker.

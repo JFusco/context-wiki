@@ -2,12 +2,12 @@
   "version": 1,
   "wikiRoot": "wiki",
   "counts": {
-    "nodes": 27,
-    "edges": 58,
+    "nodes": 29,
+    "edges": 62,
     "byType": {
       "index": 3,
-      "journal": 11,
-      "plan": 7,
+      "journal": 12,
+      "plan": 8,
       "topic": 6
     }
   },
@@ -32,8 +32,8 @@
       "githubRefs": [],
       "bytes": 1658,
       "degree": 2,
-      "x": 0.893633,
-      "y": 0.448799,
+      "x": 0.907575,
+      "y": 0.419889,
       "size": 8
     },
     {
@@ -44,8 +44,8 @@
       "githubRefs": [],
       "bytes": 1938,
       "degree": 3,
-      "x": 0.766044,
-      "y": 0.642788,
+      "x": 0.796093,
+      "y": 0.605174,
       "size": 8
     },
     {
@@ -63,8 +63,8 @@
       ],
       "bytes": 2391,
       "degree": 7,
-      "x": 0.597159,
-      "y": 0.802123,
+      "x": 0.647386,
+      "y": 0.762162,
       "size": 8
     },
     {
@@ -88,8 +88,8 @@
       ],
       "bytes": 2593,
       "degree": 7,
-      "x": 0.39608,
-      "y": 0.918216,
+      "x": 0.468408,
+      "y": 0.883512,
       "size": 8
     },
     {
@@ -107,8 +107,8 @@
       ],
       "bytes": 2218,
       "degree": 4,
-      "x": 0.173648,
-      "y": 0.984808,
+      "x": 0.267528,
+      "y": 0.96355,
       "size": 8
     },
     {
@@ -126,8 +126,8 @@
       ],
       "bytes": 1454,
       "degree": 5,
-      "x": -0.058145,
-      "y": 0.998308,
+      "x": 0.054139,
+      "y": 0.998533,
       "size": 8
     },
     {
@@ -151,8 +151,8 @@
       ],
       "bytes": 2301,
       "degree": 2,
-      "x": -0.286803,
-      "y": 0.95799,
+      "x": -0.161782,
+      "y": 0.986827,
       "size": 8
     },
     {
@@ -170,8 +170,8 @@
       ],
       "bytes": 448,
       "degree": 0,
-      "x": -0.5,
-      "y": 0.866025,
+      "x": -0.370138,
+      "y": 0.928977,
       "size": 8
     },
     {
@@ -189,8 +189,8 @@
       ],
       "bytes": 618,
       "degree": 0,
-      "x": -0.686242,
-      "y": 0.727374,
+      "x": -0.561187,
+      "y": 0.827689,
       "size": 8
     },
     {
@@ -208,8 +208,8 @@
       ],
       "bytes": 466,
       "degree": 0,
-      "x": -0.835488,
-      "y": 0.549509,
+      "x": -0.725995,
+      "y": 0.687699,
       "size": 8
     },
     {
@@ -227,8 +227,27 @@
       ],
       "bytes": 645,
       "degree": 0,
-      "x": -0.939693,
-      "y": 0.34202,
+      "x": -0.856857,
+      "y": 0.515554,
+      "size": 8
+    },
+    {
+      "id": "wiki/journal/2026-09-28-standardize-deterministic-git-delivery.md",
+      "label": "Standardize deterministic Git delivery",
+      "type": "journal",
+      "aliases": [],
+      "githubRefs": [
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 25,
+          "url": "https://github.com/jfusco/context-wiki/issues/25"
+        }
+      ],
+      "bytes": 1395,
+      "degree": 2,
+      "x": -0.947653,
+      "y": 0.319302,
       "size": 8
     },
     {
@@ -237,10 +256,10 @@
       "type": "index",
       "aliases": [],
       "githubRefs": [],
-      "bytes": 3218,
+      "bytes": 3215,
       "degree": 2,
-      "x": 0.973045,
-      "y": 0.230616,
+      "x": 0.976621,
+      "y": 0.21497,
       "size": 12
     },
     {
@@ -251,8 +270,8 @@
       "githubRefs": [],
       "bytes": 8073,
       "degree": 4,
-      "x": -0.993238,
-      "y": 0.116093,
+      "x": -0.994138,
+      "y": 0.108119,
       "size": 8
     },
     {
@@ -270,8 +289,8 @@
       ],
       "bytes": 2453,
       "degree": 4,
-      "x": -0.993238,
-      "y": -0.116093,
+      "x": -0.994138,
+      "y": -0.108119,
       "size": 8
     },
     {
@@ -295,8 +314,8 @@
       ],
       "bytes": 1895,
       "degree": 4,
-      "x": -0.939693,
-      "y": -0.34202,
+      "x": -0.947653,
+      "y": -0.319302,
       "size": 8
     },
     {
@@ -314,8 +333,8 @@
       ],
       "bytes": 1924,
       "degree": 4,
-      "x": -0.835488,
-      "y": -0.549509,
+      "x": -0.856857,
+      "y": -0.515554,
       "size": 8
     },
     {
@@ -345,8 +364,8 @@
       ],
       "bytes": 4312,
       "degree": 5,
-      "x": -0.686242,
-      "y": -0.727374,
+      "x": -0.725995,
+      "y": -0.687699,
       "size": 8
     },
     {
@@ -357,8 +376,8 @@
       "githubRefs": [],
       "bytes": 2716,
       "degree": 6,
-      "x": -0.5,
-      "y": -0.866025,
+      "x": -0.561187,
+      "y": -0.827689,
       "size": 8
     },
     {
@@ -376,8 +395,27 @@
       ],
       "bytes": 1408,
       "degree": 3,
-      "x": -0.286803,
-      "y": -0.95799,
+      "x": -0.370138,
+      "y": -0.928977,
+      "size": 8
+    },
+    {
+      "id": "wiki/plans/2026-09-28-standardize-deterministic-git-delivery-d9459693bc.md",
+      "label": "Standardize deterministic Git delivery",
+      "type": "plan",
+      "aliases": [],
+      "githubRefs": [
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 25,
+          "url": "https://github.com/jfusco/context-wiki/issues/25"
+        }
+      ],
+      "bytes": 1644,
+      "degree": 3,
+      "x": -0.161782,
+      "y": -0.986827,
       "size": 8
     },
     {
@@ -419,6 +457,12 @@
         {
           "repository": "jfusco/context-wiki",
           "kind": "issue",
+          "number": 25,
+          "url": "https://github.com/jfusco/context-wiki/issues/25"
+        },
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
           "number": 38,
           "url": "https://github.com/jfusco/context-wiki/issues/38"
         },
@@ -441,10 +485,10 @@
           "url": "https://github.com/jfusco/context-wiki/pull/561"
         }
       ],
-      "bytes": 47523,
-      "degree": 9,
-      "x": -0.058145,
-      "y": -0.998308,
+      "bytes": 47857,
+      "degree": 10,
+      "x": 0.054139,
+      "y": -0.998533,
       "size": 12
     },
     {
@@ -455,8 +499,8 @@
       "githubRefs": [],
       "bytes": 1951,
       "degree": 4,
-      "x": 0.173648,
-      "y": -0.984808,
+      "x": 0.267528,
+      "y": -0.96355,
       "size": 8
     },
     {
@@ -480,8 +524,8 @@
       ],
       "bytes": 3340,
       "degree": 11,
-      "x": 0.39608,
-      "y": -0.918216,
+      "x": 0.468408,
+      "y": -0.883512,
       "size": 8
     },
     {
@@ -493,20 +537,20 @@
         {
           "repository": "jfusco/context-wiki",
           "kind": "issue",
-          "number": 7,
-          "url": "https://github.com/jfusco/context-wiki/issues/7"
+          "number": 13,
+          "url": "https://github.com/jfusco/context-wiki/issues/13"
         },
         {
           "repository": "jfusco/context-wiki",
           "kind": "issue",
-          "number": 13,
-          "url": "https://github.com/jfusco/context-wiki/issues/13"
+          "number": 25,
+          "url": "https://github.com/jfusco/context-wiki/issues/25"
         }
       ],
-      "bytes": 2763,
-      "degree": 4,
-      "x": 0.597159,
-      "y": -0.802123,
+      "bytes": 2339,
+      "degree": 6,
+      "x": 0.647386,
+      "y": -0.762162,
       "size": 8
     },
     {
@@ -524,8 +568,8 @@
       ],
       "bytes": 1227,
       "degree": 7,
-      "x": 0.766044,
-      "y": -0.642788,
+      "x": 0.796093,
+      "y": -0.605174,
       "size": 8
     },
     {
@@ -545,10 +589,10 @@
           "url": "https://github.com/jfusco/context-wiki/issues/7"
         }
       ],
-      "bytes": 3514,
+      "bytes": 3433,
       "degree": 7,
-      "x": 0.893633,
-      "y": -0.448799,
+      "x": 0.907575,
+      "y": -0.419889,
       "size": 8
     },
     {
@@ -566,8 +610,8 @@
       ],
       "bytes": 2239,
       "degree": 10,
-      "x": 0.973045,
-      "y": -0.230616,
+      "x": 0.976621,
+      "y": -0.21497,
       "size": 8
     }
   ],
@@ -685,6 +729,13 @@
       "relation": "topic"
     },
     {
+      "id": "3b55bf69ad14cd84",
+      "source": "wiki/plans/2026-09-28-standardize-deterministic-git-delivery-d9459693bc.md",
+      "target": "wiki/topics/repository-automation.md",
+      "type": "topic",
+      "relation": "topic"
+    },
+    {
       "id": "3d44ee1bf1449819",
       "source": "wiki/topics/wiki-navigation-and-automation.md",
       "target": "wiki/plans/2026-08-24-deterministic-route-first-wiki-guidance-and-pr-127-recovery-9f56bf461c.md",
@@ -697,6 +748,13 @@
       "target": "wiki/topics/wiki-system.md",
       "type": "topic",
       "relation": "topic"
+    },
+    {
+      "id": "4dc761ab53f6b4e5",
+      "source": "wiki/journal/2026-09-28-standardize-deterministic-git-delivery.md",
+      "target": "wiki/plans/2026-09-28-standardize-deterministic-git-delivery-d9459693bc.md",
+      "type": "plan",
+      "relation": "plan"
     },
     {
       "id": "6054eb89bc06ebe2",
@@ -930,6 +988,13 @@
       "relation": "link"
     },
     {
+      "id": "e782c610ee2fd6fe",
+      "source": "wiki/journal/2026-09-28-standardize-deterministic-git-delivery.md",
+      "target": "wiki/topics/repository-automation.md",
+      "type": "topic",
+      "relation": "topic"
+    },
+    {
       "id": "eddc7f50c1cfb162",
       "source": "wiki/journal/2026-08-23-promote-canonical-wiki-parity.md",
       "target": "wiki/plans/2026-08-23-promote-canonical-wiki-parity-369416673b.md",
@@ -975,6 +1040,13 @@
       "id": "faafe85ffa17bc29",
       "source": "wiki/topics/script-testing.md",
       "target": "wiki/plans/2026-08-23-create-tracking-issue-and-implementation-branch-aa427de2df.md",
+      "type": "link",
+      "relation": "link"
+    },
+    {
+      "id": "fd87a0f0192d9bef",
+      "source": "wiki/plans/INDEX.md",
+      "target": "wiki/plans/2026-09-28-standardize-deterministic-git-delivery-d9459693bc.md",
       "type": "link",
       "relation": "link"
     }
