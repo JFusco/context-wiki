@@ -39,6 +39,31 @@ git diff --check
 
 Review `git status --short` and keep unrelated user changes intact.
 
+## Git delivery flow
+
+For repository changes that include delivery, complete this sequence:
+
+1. Confirm the worktree is safe to switch, then switch to `main` and run
+   `git pull --ff-only` so the branch point is the current remote main.
+2. Create one actionable GitHub issue with the repository's canonical labels
+   using the `github-issue-creator` workflow, and read the saved issue back
+   before creating downstream artifacts.
+3. Create `codex/<issue-number>-<short-slug>` from that updated `main`.
+4. Implement only the issue scope, record substantive work in the wiki in the
+   same delivery, and run `pnpm run verify:ci`.
+5. Commit with a valid conventional message, then push the issue branch with
+   ordinary Git commands.
+6. Open a pull request with a conventional title and the canonical
+   `.github/pull_request_template.md` body. Keep its level-two headings exactly
+   once and in order; replace every placeholder with meaningful content,
+   include `Closes #<issue-number>`, record verification and risk/rollback,
+   and complete every required checkbox. Run `pnpm run lint:pr` before opening
+   the PR and read the saved PR back afterward.
+7. Stop after the pull request is open and verified. Never merge it, enable
+   auto-merge, delete the delivery branch, or close the issue as part of this
+   flow. Leave review and merging to the user.
+
+
 <!-- wiki-skill:start -->
 ## Context wiki
 

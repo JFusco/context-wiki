@@ -35,24 +35,23 @@ test("package manifest exposes the Sigma graph workflow", () => {
   assert.equal(manifest.type, "commonjs");
   assert.equal(manifest.dependencies.sigma, "3.0.3");
   assert.equal(manifest.dependencies.graphology, "0.26.0");
-  assert.equal(manifest.devDependencies["@verndale/ai-commit"], "2.7.0");
-  assert.equal(manifest.devDependencies["@verndale/ai-pr"], "1.3.5");
+  assert.equal(manifest.devDependencies["@commitlint/cli"], "20.5.3");
+  assert.equal(manifest.devDependencies["@commitlint/config-conventional"], "20.5.3");
   assert.equal(manifest.engines.node, ">=24.14.0");
   assert.equal(manifest.scripts["graph:build"], "node scripts/wiki/build-graph.cjs");
   assert.equal(manifest.scripts["graph:view"], "node scripts/wiki/serve-graph.cjs");
   assert.equal(manifest.scripts["verify:push"], "pnpm run validate");
-  assert.equal(manifest.scripts["verify:ci"], "pnpm run test:unit && pnpm run validate");
-  assert.equal(manifest.scripts.commit, "ai-commit run");
-  assert.equal(manifest.scripts["pr:create"], "ai-pr");
+  assert.equal(manifest.scripts["verify:ci"], "pnpm run test:unit && pnpm run test:tooling && pnpm run validate");
+  assert.equal(manifest.scripts.commit, undefined);
+  assert.equal(manifest.scripts["pr:create"], undefined);
   assert.equal(manifest.scripts.prepare, "husky");
-  assert.equal(fs.readFileSync(path.join(SKILL, "commitlint.config.cjs"), "utf8"), 'module.exports = require("@verndale/ai-commit");\n');
-  assert.match(fs.readFileSync(path.join(SKILL, "pnpm-workspace.yaml"), "utf8"), /publicHoistPattern:\n  - "@commitlint\/cli"/);
-  for (const relative of [".env.example", ".github/workflows/quality.yml", ".github/workflows/commitlint.yml", ".husky/commit-msg", ".husky/prepare-commit-msg"]) {
+  assert.match(fs.readFileSync(path.join(SKILL, "commitlint.config.cjs"), "utf8"), /@commitlint\/config-conventional/);
+  for (const relative of [".github/pull_request_template.md", ".github/workflows/quality.yml", ".github/workflows/commitlint.yml", ".husky/commit-msg"]) {
     assert.ok(fs.existsSync(path.join(SKILL, relative)), relative);
   }
-  const prWorkflow = fs.readFileSync(path.join(SKILL, ".github/workflows/pr.yml"), "utf8");
-  assert.match(prWorkflow, /workflow_dispatch:/);
-  assert.doesNotMatch(prWorkflow, /\n\s+push:/);
+  for (const relative of [".env.example", ".github/workflows/pr.yml", ".husky/prepare-commit-msg"]) {
+    assert.equal(fs.existsSync(path.join(SKILL, relative)), false, relative);
+  }
   const quality = fs.readFileSync(path.join(SKILL, ".github/workflows/quality.yml"), "utf8");
   assert.match(quality, /fetch-depth: 0/);
   assert.match(quality, /run: pnpm run verify:ci/);
@@ -61,8 +60,8 @@ test("package manifest exposes the Sigma graph workflow", () => {
   assert.doesNotMatch(quality, /run: pnpm (?:run )?validate/);
 });
 
-test("a clean pnpm fixture exposes commitlint through ai-commit without a direct CLI dependency", () => {
-  const root = temp("commitlint-hoist");
+test("a clean pnpm fixture exposes standalone commitlint", () => {
+  const root = temp("commitlint");
   for (const relative of ["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "commitlint.config.cjs"]) fs.copyFileSync(path.join(SKILL, relative), path.join(root, relative));
   const install = run("pnpm", ["install", "--prefer-offline", "--frozen-lockfile", "--ignore-scripts"], { cwd: root });
   assert.equal(install.status, 0, install.stderr);
@@ -250,16 +249,16 @@ test("Git initialization installs workflows and dispatches a legacy hook", () =>
   assert.doesNotMatch(check, /pnpm|corepack|gh api/);
   assert.match(sync, /^name: Sync context wiki$/m);
   assert.match(issueSync, /^name: Sync wiki issue state$/m);
-  assert.doesNotMatch(sync, /slack|@verndale\/ai-pr/i);
+  assert.doesNotMatch(sync, /slack/i);
   for (const workflow of [check, sync, issueSync]) {
     assert.match(workflow, /node-version: "24\.14\.0"/);
     assert.doesNotMatch(workflow, /corepack|pnpm install|playwright install/i);
   }
   for (const workflow of [sync, issueSync]) {
     assert.match(workflow, /GRAPHIFY_SKIP_HOOK: "1"/);
-    assert.match(workflow, /token: \$\{\{ secrets\.PR_BOT_TOKEN \}\}/);
+    assert.match(workflow, /token: \$\{\{ secrets\.BOT_TOKEN \}\}/);
     assert.doesNotMatch(workflow, /persist-credentials: false/);
-    assert.match(workflow, /PR_BOT_TOKEN/);
+    assert.match(workflow, /BOT_TOKEN/);
     assert.match(workflow, /jobs:\n  sync:/);
     assert.match(workflow, /--force-with-lease/);
     assert.match(workflow, /gh api --method PATCH/);

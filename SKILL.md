@@ -43,7 +43,7 @@ To reconcile only the managed `AGENTS.md` block while preserving assets, hooks, 
 
 The full installer checksum-manages scripts, viewer assets, three wiki workflows, managed `AGENTS.md`/`CLAUDE.md` blocks, and an advisory pre-commit block. It creates `wiki/plans/INDEX.md` only when missing. It preserves authored files, local hook failures, Husky 9 dispatch, and conflicts instead of overwriting them.
 
-GitHub installs use these exact workflows: `Wiki integrity` (`check`), `Sync context wiki` (`sync`), and `Sync wiki issue state` (`sync`). Writers use `PR_BOT_TOKEN`, reviewable `bot/wiki-*` branches, Node 24, `GRAPHIFY_SKIP_HOOK=1`, and never push directly to the default branch.
+GitHub installs use these exact workflows: `Wiki integrity` (`check`), `Sync context wiki` (`sync`), and `Sync wiki issue state` (`sync`). Writers use `BOT_TOKEN`, reviewable `bot/wiki-*` branches, Node 24, `GRAPHIFY_SKIP_HOOK=1`, and never push directly to the default branch.
 
 ## Backfill plans
 

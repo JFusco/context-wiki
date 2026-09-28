@@ -32,6 +32,12 @@ jobs:
         run: corepack enable && corepack prepare pnpm@10.33.0 --activate
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Validate PR body
+        if: ${{ !startsWith(github.event.pull_request.head.ref, 'bot/wiki-') }}
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: pnpm run lint:pr
+
       - name: Lint PR title
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}

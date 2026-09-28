@@ -452,7 +452,7 @@ function main() {
   for (const item of warnings) console.warn(`warning: ${item}`);
   for (const item of conflicts) console.error(`conflict: ${item}`);
   if (hook) console.log(`hook: ${hook}`);
-  if (includeGithub) console.log("github: core workflows installed; configure PR_BOT_TOKEN");
+  if (includeGithub) console.log("github: core workflows installed; configure BOT_TOKEN");
   return conflicts.length ? 2 : (args.dryRun && changes.length ? 1 : 0);
 }
 

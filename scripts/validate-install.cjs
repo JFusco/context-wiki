@@ -9,7 +9,7 @@ function main() {
   const root = path.resolve(__dirname, "..");
   const errors = [];
   const required = [
-    "SKILL.md", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "commitlint.config.cjs", ".env.example", ".github/workflows/quality.yml", ".github/workflows/commitlint.yml", ".github/workflows/pr.yml", ".husky/commit-msg", ".husky/prepare-commit-msg",
+    "SKILL.md", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "commitlint.config.cjs", ".github/pull_request_template.md", ".github/workflows/quality.yml", ".github/workflows/commitlint.yml", ".husky/commit-msg",
     "agents/openai.yaml", "scripts/init-repository.cjs", "scripts/update-repository.cjs", "scripts/test.cjs", "assets/repository/wiki/INDEX.md",
     "assets/repository/scripts/wiki/discover-plans.cjs", "assets/repository/scripts/wiki/archive-plan.cjs",
     "assets/repository/scripts/wiki/build-graph.cjs", "assets/repository/scripts/wiki/check.cjs",
@@ -23,11 +23,9 @@ function main() {
   ];
   for (const relative of required) if (!fs.existsSync(path.join(root, relative))) errors.push(`missing ${relative}`);
   const manifest = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
-  if (manifest.devDependencies?.["@verndale/ai-commit"] !== "2.7.0") errors.push("@verndale/ai-commit must be pinned to 2.7.0 as the sole Commitlint provider");
-  if (manifest.scripts?.["verify:push"] !== "pnpm run validate" || manifest.scripts?.["verify:ci"] !== "pnpm run test:unit && pnpm run validate") errors.push("repository verification aliases are incomplete");
-  if (manifest.devDependencies?.["@verndale/ai-pr"] !== "1.3.5" || manifest.scripts?.["pr:create"] !== "ai-pr") errors.push("the source repository PR helper must remain pinned and callable");
-  const prWorkflow = fs.readFileSync(path.join(root, ".github/workflows/pr.yml"), "utf8");
-  if (!prWorkflow.includes("workflow_dispatch:") || /\n\s+push:/.test(prWorkflow)) errors.push("the generic PR workflow must be manual-dispatch only");
+  if (manifest.devDependencies?.["@commitlint/cli"] !== "20.5.3" || manifest.devDependencies?.["@commitlint/config-conventional"] !== "20.5.3") errors.push("standalone Commitlint dependencies must be pinned to 20.5.3");
+  if (manifest.scripts?.commit || manifest.scripts?.["pr:create"]) errors.push("removed assisted delivery scripts must not remain");
+  if (manifest.scripts?.["verify:push"] !== "pnpm run validate" || manifest.scripts?.["verify:ci"] !== "pnpm run test:unit && pnpm run test:tooling && pnpm run validate") errors.push("repository verification aliases are incomplete");
   const qualityWorkflow = fs.readFileSync(path.join(root, ".github/workflows/quality.yml"), "utf8");
   if (!qualityWorkflow.includes("run: pnpm run verify:ci") || !qualityWorkflow.includes("wiki/*|scripts/wiki/graph/data/graph.json") || !qualityWorkflow.includes("github.event.pull_request.draft") || /run: pnpm (?:run )?validate/.test(qualityWorkflow)) errors.push("Quality must classify draft and wiki-only pull requests before invoking verify:ci");
   const commitlintWorkflow = fs.readFileSync(path.join(root, ".github/workflows/commitlint.yml"), "utf8");
@@ -47,8 +45,9 @@ function main() {
   for (const workflow of wikiWorkflows) if (/corepack|pnpm install|playwright install/i.test(workflow)) errors.push("portable wiki workflows must not install application dependencies or browsers");
   if (!wikiWorkflows[0].includes("run: node scripts/wiki/check.cjs") || /\n\s+push:/.test(wikiWorkflows[0])) errors.push("Wiki integrity must run the direct Node check without a main push trigger");
   if (!wikiWorkflows[2].includes('cron: "30 11 * * 1"') || !wikiWorkflows[2].includes("scripts/wiki/reconcile-merges.cjs")) errors.push("weekly wiki maintenance must refresh issue state and reconcile missed merges");
-  if (fs.readFileSync(path.join(root, "commitlint.config.cjs"), "utf8") !== 'module.exports = require("@verndale/ai-commit");\n') errors.push("commitlint.config.cjs must be the canonical one-line provider config");
-  if (!/publicHoistPattern:\s*\n\s+- ["']@commitlint\/cli["']/.test(fs.readFileSync(path.join(root, "pnpm-workspace.yaml"), "utf8"))) errors.push("pnpm workspace must narrowly public-hoist @commitlint/cli");
+  if (!fs.readFileSync(path.join(root, "commitlint.config.cjs"), "utf8").includes("@commitlint/config-conventional")) errors.push("commitlint.config.cjs must use the standalone conventional preset");
+  if (fs.existsSync(path.join(root, ".github/workflows/pr.yml")) || fs.existsSync(path.join(root, ".husky/prepare-commit-msg")) || fs.existsSync(path.join(root, ".env.example"))) errors.push("removed helper surfaces must not remain");
+  if (!commitlintWorkflow.includes("run: pnpm run lint:pr")) errors.push("Commit message lint must validate the pull request body");
   const skill = fs.readFileSync(path.join(root, "SKILL.md"), "utf8");
   if (!/^---\nname: wiki\ndescription: .+\n---\n/.test(skill)) errors.push("SKILL.md frontmatter is invalid");
   if (skill.split(/\r?\n/).length > 500) errors.push("SKILL.md exceeds 500 lines");
