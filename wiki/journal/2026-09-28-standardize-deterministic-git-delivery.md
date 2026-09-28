@@ -1,7 +1,8 @@
 ---
 topics: [repository-automation]
 plans: [2026-09-28-standardize-deterministic-git-delivery-d9459693bc.md]
-issue: "https://github.com/JFusco/context-wiki/issues/25"
+issue: 'https://github.com/jfusco/context-wiki/issues/25'
+issues: ['https://github.com/jfusco/context-wiki/issues/25']
 ---
 
 # Standardize deterministic Git delivery
