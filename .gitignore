@@ -2,3 +2,17 @@ node_modules/
 .env
 .env.local
 .DS_Store
+
+# Share the code map; keep Graphify machine-local state out of Git.
+/graphify-out/*
+!/graphify-out/graph.html
+!/graphify-out/graph.json
+!/graphify-out/GRAPH_REPORT.md
+!/graphify-out/manifest.json
+!/graphify-out/.graphify_analysis.json
+!/graphify-out/.graphify_labels.json
+!/graphify-out/.graphify_labels.json.sig
+.graphify_detect.json
+.graphify_ast.json
+.graphify_old.json
+*.graphify-bak

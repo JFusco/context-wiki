@@ -2,13 +2,13 @@
   "version": 1,
   "wikiRoot": "wiki",
   "counts": {
-    "nodes": 29,
-    "edges": 62,
+    "nodes": 32,
+    "edges": 69,
     "byType": {
       "index": 3,
-      "journal": 12,
-      "plan": 8,
-      "topic": 6
+      "journal": 13,
+      "plan": 9,
+      "topic": 7
     }
   },
   "nodes": [
@@ -18,8 +18,8 @@
       "type": "index",
       "aliases": [],
       "githubRefs": [],
-      "bytes": 1361,
-      "degree": 2,
+      "bytes": 1472,
+      "degree": 3,
       "x": 1,
       "y": 0,
       "size": 12
@@ -32,8 +32,8 @@
       "githubRefs": [],
       "bytes": 1658,
       "degree": 2,
-      "x": 0.907575,
-      "y": 0.419889,
+      "x": 0.92388,
+      "y": 0.382683,
       "size": 8
     },
     {
@@ -44,8 +44,8 @@
       "githubRefs": [],
       "bytes": 1938,
       "degree": 3,
-      "x": 0.796093,
-      "y": 0.605174,
+      "x": 0.83147,
+      "y": 0.55557,
       "size": 8
     },
     {
@@ -63,8 +63,8 @@
       ],
       "bytes": 2391,
       "degree": 7,
-      "x": 0.647386,
-      "y": 0.762162,
+      "x": 0.707107,
+      "y": 0.707107,
       "size": 8
     },
     {
@@ -88,8 +88,8 @@
       ],
       "bytes": 2593,
       "degree": 7,
-      "x": 0.468408,
-      "y": 0.883512,
+      "x": 0.55557,
+      "y": 0.83147,
       "size": 8
     },
     {
@@ -107,8 +107,8 @@
       ],
       "bytes": 2218,
       "degree": 4,
-      "x": 0.267528,
-      "y": 0.96355,
+      "x": 0.382683,
+      "y": 0.92388,
       "size": 8
     },
     {
@@ -126,8 +126,8 @@
       ],
       "bytes": 1454,
       "degree": 5,
-      "x": 0.054139,
-      "y": 0.998533,
+      "x": 0.19509,
+      "y": 0.980785,
       "size": 8
     },
     {
@@ -151,8 +151,8 @@
       ],
       "bytes": 2301,
       "degree": 2,
-      "x": -0.161782,
-      "y": 0.986827,
+      "x": 0,
+      "y": 1,
       "size": 8
     },
     {
@@ -170,8 +170,8 @@
       ],
       "bytes": 448,
       "degree": 0,
-      "x": -0.370138,
-      "y": 0.928977,
+      "x": -0.19509,
+      "y": 0.980785,
       "size": 8
     },
     {
@@ -189,8 +189,8 @@
       ],
       "bytes": 618,
       "degree": 0,
-      "x": -0.561187,
-      "y": 0.827689,
+      "x": -0.382683,
+      "y": 0.92388,
       "size": 8
     },
     {
@@ -208,8 +208,8 @@
       ],
       "bytes": 466,
       "degree": 0,
-      "x": -0.725995,
-      "y": 0.687699,
+      "x": -0.55557,
+      "y": 0.83147,
       "size": 8
     },
     {
@@ -227,8 +227,8 @@
       ],
       "bytes": 645,
       "degree": 0,
-      "x": -0.856857,
-      "y": 0.515554,
+      "x": -0.707107,
+      "y": 0.707107,
       "size": 8
     },
     {
@@ -246,8 +246,27 @@
       ],
       "bytes": 1456,
       "degree": 2,
-      "x": -0.947653,
-      "y": 0.319302,
+      "x": -0.83147,
+      "y": 0.55557,
+      "size": 8
+    },
+    {
+      "id": "wiki/journal/2026-09-29-commit-and-graphify-workflow.md",
+      "label": "Maintainer workflow",
+      "type": "journal",
+      "aliases": [],
+      "githubRefs": [
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 28,
+          "url": "https://github.com/jfusco/context-wiki/issues/28"
+        }
+      ],
+      "bytes": 730,
+      "degree": 4,
+      "x": -0.92388,
+      "y": 0.382683,
       "size": 8
     },
     {
@@ -258,8 +277,8 @@
       "githubRefs": [],
       "bytes": 3215,
       "degree": 2,
-      "x": 0.976621,
-      "y": 0.21497,
+      "x": 0.980785,
+      "y": 0.19509,
       "size": 12
     },
     {
@@ -270,8 +289,8 @@
       "githubRefs": [],
       "bytes": 8073,
       "degree": 4,
-      "x": -0.994138,
-      "y": 0.108119,
+      "x": -0.980785,
+      "y": 0.19509,
       "size": 8
     },
     {
@@ -289,8 +308,8 @@
       ],
       "bytes": 2453,
       "degree": 4,
-      "x": -0.994138,
-      "y": -0.108119,
+      "x": -1,
+      "y": 0,
       "size": 8
     },
     {
@@ -314,8 +333,8 @@
       ],
       "bytes": 1895,
       "degree": 4,
-      "x": -0.947653,
-      "y": -0.319302,
+      "x": -0.980785,
+      "y": -0.19509,
       "size": 8
     },
     {
@@ -333,8 +352,8 @@
       ],
       "bytes": 1924,
       "degree": 4,
-      "x": -0.856857,
-      "y": -0.515554,
+      "x": -0.92388,
+      "y": -0.382683,
       "size": 8
     },
     {
@@ -364,8 +383,8 @@
       ],
       "bytes": 4312,
       "degree": 5,
-      "x": -0.725995,
-      "y": -0.687699,
+      "x": -0.83147,
+      "y": -0.55557,
       "size": 8
     },
     {
@@ -376,8 +395,8 @@
       "githubRefs": [],
       "bytes": 2716,
       "degree": 6,
-      "x": -0.561187,
-      "y": -0.827689,
+      "x": -0.707107,
+      "y": -0.707107,
       "size": 8
     },
     {
@@ -395,8 +414,8 @@
       ],
       "bytes": 1408,
       "degree": 3,
-      "x": -0.370138,
-      "y": -0.928977,
+      "x": -0.55557,
+      "y": -0.83147,
       "size": 8
     },
     {
@@ -414,8 +433,20 @@
       ],
       "bytes": 1644,
       "degree": 3,
-      "x": -0.161782,
-      "y": -0.986827,
+      "x": -0.382683,
+      "y": -0.92388,
+      "size": 8
+    },
+    {
+      "id": "wiki/plans/2026-09-29-standardize-commit-messages-and-graphify-across-eight-repositories-e4b953bbda.md",
+      "label": "Standardize commit messages and Graphify across eight repositories",
+      "type": "plan",
+      "aliases": [],
+      "githubRefs": [],
+      "bytes": 2219,
+      "degree": 4,
+      "x": -0.19509,
+      "y": -0.980785,
       "size": 8
     },
     {
@@ -485,10 +516,10 @@
           "url": "https://github.com/jfusco/context-wiki/pull/561"
         }
       ],
-      "bytes": 47857,
-      "degree": 10,
-      "x": 0.054139,
-      "y": -0.998533,
+      "bytes": 48215,
+      "degree": 11,
+      "x": 0,
+      "y": -1,
       "size": 12
     },
     {
@@ -499,8 +530,8 @@
       "githubRefs": [],
       "bytes": 1951,
       "degree": 4,
-      "x": 0.267528,
-      "y": -0.96355,
+      "x": 0.19509,
+      "y": -0.980785,
       "size": 8
     },
     {
@@ -524,8 +555,27 @@
       ],
       "bytes": 3340,
       "degree": 11,
-      "x": 0.468408,
-      "y": -0.883512,
+      "x": 0.382683,
+      "y": -0.92388,
+      "size": 8
+    },
+    {
+      "id": "wiki/topics/maintainer-workflow.md",
+      "label": "Maintainer workflow",
+      "type": "topic",
+      "aliases": [],
+      "githubRefs": [
+        {
+          "repository": "jfusco/context-wiki",
+          "kind": "issue",
+          "number": 28,
+          "url": "https://github.com/jfusco/context-wiki/issues/28"
+        }
+      ],
+      "bytes": 1255,
+      "degree": 4,
+      "x": 0.55557,
+      "y": -0.83147,
       "size": 8
     },
     {
@@ -549,8 +599,8 @@
       ],
       "bytes": 2339,
       "degree": 6,
-      "x": 0.647386,
-      "y": -0.762162,
+      "x": 0.707107,
+      "y": -0.707107,
       "size": 8
     },
     {
@@ -568,8 +618,8 @@
       ],
       "bytes": 1227,
       "degree": 7,
-      "x": 0.796093,
-      "y": -0.605174,
+      "x": 0.83147,
+      "y": -0.55557,
       "size": 8
     },
     {
@@ -591,8 +641,8 @@
       ],
       "bytes": 3433,
       "degree": 7,
-      "x": 0.907575,
-      "y": -0.419889,
+      "x": 0.92388,
+      "y": -0.382683,
       "size": 8
     },
     {
@@ -610,8 +660,8 @@
       ],
       "bytes": 2239,
       "degree": 10,
-      "x": 0.976621,
-      "y": -0.21497,
+      "x": 0.980785,
+      "y": -0.19509,
       "size": 8
     }
   ],
@@ -631,6 +681,13 @@
       "relation": "plan"
     },
     {
+      "id": "09ee3fedbbd1edc3",
+      "source": "wiki/INDEX.md",
+      "target": "wiki/topics/maintainer-workflow.md",
+      "type": "link",
+      "relation": "link"
+    },
+    {
       "id": "0a6b33d8653947ef",
       "source": "wiki/plans/2026-08-23-create-tracking-issue-and-implementation-branch-aa427de2df.md",
       "target": "wiki/topics/script-testing.md",
@@ -643,6 +700,13 @@
       "target": "wiki/plans/2026-08-23-promote-canonical-wiki-parity-369416673b.md",
       "type": "link",
       "relation": "link"
+    },
+    {
+      "id": "0b2fa31c9021afcb",
+      "source": "wiki/plans/2026-09-29-standardize-commit-messages-and-graphify-across-eight-repositories-e4b953bbda.md",
+      "target": "wiki/topics/maintainer-workflow.md",
+      "type": "topic",
+      "relation": "topic"
     },
     {
       "id": "0c2d4d13f6f9adc5",
@@ -666,6 +730,13 @@
       "relation": "topic"
     },
     {
+      "id": "1653fcc6f5145e62",
+      "source": "wiki/journal/2026-09-29-commit-and-graphify-workflow.md",
+      "target": "wiki/plans/2026-09-29-standardize-commit-messages-and-graphify-across-eight-repositories-e4b953bbda.md",
+      "type": "link",
+      "relation": "link"
+    },
+    {
       "id": "168a94a66bf8f4a6",
       "source": "wiki/journal/2026-09-25-actions-budget-and-wiki-recovery.md",
       "target": "wiki/plans/2026-09-26-reduce-actions-usage-and-recover-wiki-synchronization-a7e32708e7.md",
@@ -676,6 +747,13 @@
       "id": "1698ca325940b0db",
       "source": "wiki/plans/2026-08-24-deterministic-route-first-wiki-guidance-and-pr-127-recovery-9f56bf461c.md",
       "target": "wiki/topics/installer-contract.md",
+      "type": "topic",
+      "relation": "topic"
+    },
+    {
+      "id": "17a1c94a46ce43f9",
+      "source": "wiki/journal/2026-09-29-commit-and-graphify-workflow.md",
+      "target": "wiki/topics/maintainer-workflow.md",
       "type": "topic",
       "relation": "topic"
     },
@@ -776,6 +854,13 @@
       "target": "wiki/plans/2026-08-23-add-focused-cjs-unit-tests-6569724de4.md",
       "type": "plan",
       "relation": "plan"
+    },
+    {
+      "id": "66f4b75cbfb4d281",
+      "source": "wiki/journal/2026-09-29-commit-and-graphify-workflow.md",
+      "target": "wiki/topics/maintainer-workflow.md",
+      "type": "link",
+      "relation": "link"
     },
     {
       "id": "6cd50786487de769",
@@ -974,6 +1059,13 @@
       "relation": "topic"
     },
     {
+      "id": "dfbf8b3022b7d062",
+      "source": "wiki/plans/INDEX.md",
+      "target": "wiki/plans/2026-09-29-standardize-commit-messages-and-graphify-across-eight-repositories-e4b953bbda.md",
+      "type": "link",
+      "relation": "link"
+    },
+    {
       "id": "e156d04ea907b58c",
       "source": "wiki/topics/wiki-system.md",
       "target": "wiki/plans/2026-08-23-self-host-the-wiki-with-standalone-claude-import-compatibility-37a2441a28.md",
@@ -993,6 +1085,13 @@
       "target": "wiki/topics/repository-automation.md",
       "type": "topic",
       "relation": "topic"
+    },
+    {
+      "id": "ec16fc1117f87382",
+      "source": "wiki/journal/2026-09-29-commit-and-graphify-workflow.md",
+      "target": "wiki/plans/2026-09-29-standardize-commit-messages-and-graphify-across-eight-repositories-e4b953bbda.md",
+      "type": "plan",
+      "relation": "plan"
     },
     {
       "id": "eddc7f50c1cfb162",
