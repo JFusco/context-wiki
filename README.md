@@ -215,3 +215,27 @@ assets/repository/          Files installed into a target repository
 Authored wiki content remains owned by the target repository. Managed mechanics are updated only when their recorded checksum still matches; otherwise the installer reports a conflict for review.
 
 `wiki/plans/INDEX.md` is a create-only seed rather than a checksum-managed asset. After initialization, archive and audit tools own its authored rows, so routine installer reconciliation preserves the ledger without reporting it as drift.
+
+## Commit messages
+
+Use a specific scoped Conventional Commit, for example
+`fix(auth): reject expired reset tokens`. Begin the subject with an action verb
+and keep the subject at most 50 characters. Leave a blank line before an
+optional body; explain the reason, impact, or tradeoff when the diff alone does
+not make it clear. Wrap body and footer lines at 72 characters. Mark breaking
+changes with `!` or a `BREAKING CHANGE:` footer. Follow the repository's
+commitlint rules for allowed types and scopes. Avoid vague or ticket-only
+subjects.
+
+## Maintainer code map
+
+Graphify 0.9.36 maps the installer scripts and shipped repository scripts; `.graphifyignore` excludes tests,
+documentation, generated files, dependencies, and local state. This code map
+is separate from the Markdown-only context wiki. The repository-local
+[Graphify skill](.agents/skills/graphify/SKILL.md) covers queries and refreshes.
+After `pnpm install --frozen-lockfile` and installing Graphify 0.9.36, run
+`graphify hook install` and `graphify hook status` once per clone. Native Git
+hooks refresh the map after commits and checkouts; run
+`PYTHONHASHSEED=0 graphify update .` after pulls or merges. Commit the graph,
+HTML, report, manifest, analysis, and labels; keep caches, machine paths, and
+query memory local. No agent tool hooks are installed.
