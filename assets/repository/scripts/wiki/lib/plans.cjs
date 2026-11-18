@@ -3,6 +3,7 @@
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const { StringDecoder } = require("node:string_decoder");
 const { digest, git, remoteSlug, walk, slash } = require("./common.cjs");
 const { splitFrontmatter, scalar, titleFromBody } = require("./frontmatter.cjs");
 
@@ -22,10 +23,29 @@ function planTitle(body) {
   return (String(body).match(/^#\s+(.+)$/m) || [])[1]?.trim().toLowerCase() || "";
 }
 
+/** A session log can be larger than one string can hold, so it is read a line at a time. */
+function* lines(file) {
+  const fd = fs.openSync(file, "r");
+  const decoder = new StringDecoder("utf8");
+  const buffer = Buffer.allocUnsafe(1 << 20);
+  let rest = "";
+  try {
+    for (let size; (size = fs.readSync(fd, buffer, 0, buffer.length, null)) > 0;) {
+      const parts = (rest + decoder.write(buffer.subarray(0, size))).split(/\r?\n/);
+      rest = parts.pop();
+      yield* parts;
+    }
+    rest += decoder.end();
+    if (rest) yield rest;
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
 function proposedPlans(file) {
   const byTitle = new Map();
   let cwd = "";
-  for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
+  for (const line of lines(file)) {
     if (!line.trim()) continue;
     let event;
     try { event = JSON.parse(line); } catch { continue; }

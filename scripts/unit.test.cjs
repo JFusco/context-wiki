@@ -309,6 +309,24 @@ test("plans extracts only assistant plans and keeps the last titled revision", (
   assert.ok(!found.some((item) => item.body.includes("User plan")));
 });
 
+test("plans reads a session log a line at a time, across chunk boundaries and line endings", (t) => {
+  const root = temp(t, "plans-jsonl-large");
+  const file = path.join(root, "session.jsonl");
+  // Longer than one read, with a multi-byte character and a CRLF that can each straddle a boundary.
+  const padding = "é".repeat(700000);
+  write(file, [
+    JSON.stringify({ type: "session_meta", payload: { cwd: "/repo/demo" } }),
+    JSON.stringify({ type: "response_item", payload: { role: "user", content: [{ text: padding }] } }),
+    JSON.stringify({ type: "event_msg", payload: { item: { type: "Plan", text: `# Long plan\n\n${padding}` } } }),
+    JSON.stringify({ type: "event_msg", payload: { item: { type: "Plan", text: "# Last plan\n\nNo trailing newline." } } }),
+  ].join("\r\n"));
+
+  const found = plans.proposedPlans(file);
+  assert.deepEqual(found.map((item) => item.body.split("\n")[0]), ["# Long plan", "# Last plan"]);
+  assert.equal(found[0].body, `# Long plan\n\n${padding}\n`);
+  assert.ok(found.every((item) => item.cwd === "/repo/demo"));
+});
+
 test("plans classifies repository associations by strongest available evidence", () => {
   const repo = { root: "/work/context-wiki", slug: "example/context-wiki", tracked: ["src/runtime.js", "README.md"] };
 
