@@ -178,6 +178,8 @@ node scripts/wiki/serve-graph.cjs
 
 Implemented and partial archives without a topic are rejected by both the archive/audit path and `wiki check`. Historical rows that were not executed may remain topicless.
 
+An archived plan can retain historical Markdown links to missing files. Topics declared in its frontmatter must exist. The pre-commit hook skips regenerating and staging the graph if wiki inputs have unstaged changes or Git status is unavailable.
+
 The viewer starts at <http://127.0.0.1:4173/> by default. If that port is occupied, it automatically selects the next available port and prints the actual URL, so graphs from multiple repositories can run together. Set `GRAPH_PORT` to require a specific port instead. Its Sigma.js presentation uses the same dark control shell, ForceAtlas2 network layout, search, type toggles, neighborhood focus, detail panel, and weighted Source/Target route as Build Orchestration. Search includes repository-qualified GitHub evidence. Node details expose those PR/issue citations, and routes show explicit authority, relationship, per-page bytes, and total bytes.
 
 ## GitHub automation
@@ -189,6 +191,8 @@ When the target is a Git repository with a GitHub `origin`, the installer adds t
 - `Sync wiki issue state`
 
 The two write workflows require a `BOT_TOKEN` repository secret with contents and pull-request write access. They propose reviewable `bot/wiki-*` branches rather than writing directly to the default branch.
+
+Automatic merge sync and numbered replay only reconcile pull requests merged into the repository default branch. Batch replay and weekly issue-state refresh share the `wiki-maintenance` concurrency group because both update `bot/wiki-maintenance`.
 
 `Sync context wiki` is merge-event driven and supports manual replay by merged PR number or an optional `since` date; with neither input it inspects the preceding 90 days. It records every same- or cross-repository issue cited with a GitHub closing keyword, merges that evidence into an existing journal when present, and ignores arbitrary or fenced citations. GitHub file status distinguishes newly authored journals from formatting-only edits to historical journals; modified journals are reused only when their PR metadata is pending or already names the merged PR. `Sync wiki issue state` runs Mondays at `30 11 * * 1`, refreshes cited issue state, and runs the same missed-merge audit. Both use dependency-free Node scripts, paginate GitHub REST evidence, suppress unavailable Graphify bot hooks, use authenticated force-with-lease, reuse an unchanged maintenance PR, and reopen an unmerged bot PR when appropriate. `Wiki integrity` also invokes `node scripts/wiki/check.cjs` directly, so portable wiki jobs do not install application dependencies or browsers.
 

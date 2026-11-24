@@ -271,10 +271,14 @@ test("Git initialization installs workflows and dispatches a legacy hook", () =>
   assert.match(sync, /pr_number and since are mutually exclusive/);
   assert.match(sync, /branch="bot\/wiki-sync\/\$PR_NUMBER"/);
   assert.match(sync, /bot\/wiki-maintenance/);
-  assert.match(sync, /group: wiki-sync-\$\{\{ inputs\.pr_number \|\| inputs\.since \|\| github\.event\.pull_request\.number \|\| 'batch' \}\}/);
+  assert.match(sync, /group: \$\{\{ \(inputs\.pr_number \|\| github\.event\.pull_request\.number\) && format\('wiki-sync-\{0\}', inputs\.pr_number \|\| github\.event\.pull_request\.number\) \|\| 'wiki-maintenance' \}\}/);
   assert.match(sync, /PR_NUMBER: \$\{\{ inputs\.pr_number \|\| github\.event\.pull_request\.number \|\| '' \}\}/);
+  assert.match(sync, /github\.event\.pull_request\.base\.ref == github\.event\.repository\.default_branch/);
+  assert.match(sync, /ref: refs\/heads\/\$\{\{ steps\.context\.outputs\.base \}\}/);
   assert.match(sync, /bot\/wiki-\*\)/);
+  assert.match(issueSync, /^  group: wiki-maintenance$/m);
   assert.match(issueSync, /cron: "30 11 \* \* 1" # Mondays at 11:30 UTC/);
+  assert.match(fs.readFileSync(path.join(root, "wiki/MECHANICS.md"), "utf8"), /Issue state runs Mondays at .30 11 \* \* 1./);
   assert.match(issueSync, /workflow_dispatch:\n    inputs:\n      since:/);
   assert.match(issueSync, /scripts\/wiki\/reconcile-merges\.cjs/);
   git(root, ["add", "."]);
@@ -283,6 +287,62 @@ test("Git initialization installs workflows and dispatches a legacy hook", () =>
   assert.equal(init(root, ["--no-github"]).status, 0);
   const managed = JSON.parse(fs.readFileSync(path.join(root, "wiki/.wiki-kit.json"), "utf8")).files;
   assert.ok(Object.keys(managed).some((file) => file === ".github/workflows/wiki-sync.yml"));
+});
+
+test("merge sync validates numbered and batch requests before credentialed checkout", () => {
+  const root = temp("wiki-sync-context");
+  const sync = fs.readFileSync(path.join(SKILL, "assets/repository/.github/workflows/wiki-sync.yml"), "utf8");
+  const start = "        id: context\n        run: |\n";
+  const script = sync.split(start)[1].split("\n      - name:")[0].replace(/^ {10}/gm, "");
+  const bin = path.join(root, "bin");
+  const gh = path.join(bin, "gh");
+  const jq = path.join(bin, "jq");
+  write(gh, [
+    "#!/usr/bin/env node",
+    'switch (process.argv.slice(2).join(" ")) {',
+    '  case "api rate_limit": break;',
+    '  case "api repos/example/repo --jq .default_branch // empty": console.log(process.env.WIKI_TEST_DEFAULT_BRANCH); break;',
+    '  case "api repos/example/repo/pulls/42": console.log(JSON.stringify({merged_at: "2026-11-24T12:00:00Z", head: {ref: "feature/topic"}, base: {ref: process.env.WIKI_TEST_PR_BASE}})); break;',
+    "  default: process.exit(1);",
+    "}",
+    "",
+  ].join("\n"));
+  write(jq, [
+    "#!/usr/bin/env node",
+    'const pr = JSON.parse(require("node:fs").readFileSync(0, "utf8"));',
+    'const values = {".merged_at // empty": pr.merged_at ?? "", ".head.ref": pr.head.ref, ".base.ref": pr.base.ref};',
+    'if (process.argv[2] !== "-r" || !Object.hasOwn(values, process.argv[3])) process.exit(1);',
+    "console.log(values[process.argv[3]]);",
+    "",
+  ].join("\n"));
+  for (const command of [gh, jq]) fs.chmodSync(command, 0o755);
+  const output = path.join(root, "output");
+  const env = {
+    PATH: [bin, process.env.PATH].join(path.delimiter),
+    GH_TOKEN: "fixture-token",
+    GITHUB_REPOSITORY: "example/repo",
+    GITHUB_OUTPUT: output,
+    WIKI_TEST_DEFAULT_BRANCH: "trunk",
+    PR_NUMBER: "42",
+    SINCE: "",
+  };
+  const replay = (overrides) => {
+    write(output, "");
+    return run("bash", ["-e", "-o", "pipefail", "-c", script], { cwd: root, env: { ...env, ...overrides } });
+  };
+  const valid = replay({ WIKI_TEST_PR_BASE: "trunk" });
+  assert.equal(valid.status, 0, valid.stderr);
+  assert.equal(fs.readFileSync(output, "utf8"), "base=trunk\n");
+  const otherBase = replay({ WIKI_TEST_PR_BASE: "release" });
+  assert.equal(otherBase.status, 1, otherBase.stderr);
+  assert.match(otherBase.stdout, /did not target the default branch/);
+  assert.equal(fs.readFileSync(output, "utf8"), "");
+  const batch = replay({ PR_NUMBER: "", SINCE: "2026-11-20" });
+  assert.equal(batch.status, 0, batch.stderr);
+  assert.equal(fs.readFileSync(output, "utf8"), "base=trunk\n");
+  const noDefault = replay({ WIKI_TEST_DEFAULT_BRANCH: "", WIKI_TEST_PR_BASE: "trunk" });
+  assert.equal(noDefault.status, 1, noDefault.stderr);
+  assert.equal(fs.readFileSync(output, "utf8"), "");
 });
 
 test("Husky and safe custom hook paths are extended; external paths are untouched", () => {
@@ -529,7 +589,12 @@ test("archived plan repo-file links remain safe and topicless archives fail vali
   assert.ok(!graph.nodes.some((node) => node.id === "wiki/plans/CONTRIBUTING.md"));
   assert.equal(node(path.join(root, "scripts/wiki/check.cjs"), ["--repo", root], { cwd: root }).status, 0);
   const archive = path.join(root, "wiki/plans/2026-01-01-contributing.md");
-  fs.writeFileSync(archive, fs.readFileSync(archive, "utf8").replace("topics: [documentation]", "topics: []"));
+  const archived = fs.readFileSync(archive, "utf8");
+  write(archive, archived.replace("topics: [documentation]", "topics: [missing]"));
+  const missing = node(build, ["--repo", root], { cwd: root });
+  assert.equal(missing.status, 2);
+  assert.match(missing.stderr, /dangling topic: wiki\/plans\/2026-01-01-contributing\.md -> wiki\/topics\/missing\.md/);
+  write(archive, archived.replace("topics: [documentation]", "topics: []"));
   assert.equal(node(build, ["--repo", root], { cwd: root }).status, 0);
   const topicless = node(path.join(root, "scripts/wiki/check.cjs"), ["--repo", root], { cwd: root });
   assert.equal(topicless.status, 2); assert.match(topicless.stderr, /at least one topic is required/);
@@ -836,6 +901,41 @@ test("pre-commit does not stage graph output derived from unstaged wiki content"
   assert.equal(result.status, 0); assert.match(result.stderr, /unstaged wiki changes/);
   assert.equal(fs.readFileSync(graphFile, "utf8"), before);
   assert.equal(git(root, ["diff", "--cached", "--name-only"]), "code.js");
+});
+
+test("pre-commit preserves the first status column and skips when status cannot be read", () => {
+  const root = makeGit("precommit-status"); assert.equal(init(root).status, 0);
+  write(path.join(root, "wiki/topics/a-unstaged.md"), "# First topic\n");
+  write(path.join(root, "wiki/topics/z-staged.md"), "# Last topic\n");
+  const build = path.join(root, "scripts/wiki/build-graph.cjs");
+  assert.equal(node(build, [], { cwd: root }).status, 0);
+  git(root, ["add", "."]); git(root, ["-c", "core.hooksPath=/dev/null", "commit", "-qm", "baseline"]);
+  const graphFile = path.join(root, "scripts/wiki/graph/data/graph.json");
+  const before = fs.readFileSync(graphFile, "utf8");
+  write(path.join(root, "wiki/topics/a-unstaged.md"), "# First topic changed only in worktree\n");
+  write(path.join(root, "wiki/topics/z-staged.md"), "# Last topic changed and staged\n");
+  git(root, ["add", "wiki/topics/z-staged.md"]);
+  const status = run("git", ["status", "--porcelain", "--", "wiki"], { cwd: root });
+  assert.match(status.stdout, /^ M wiki\/topics\/a-unstaged\.md\nM  wiki\/topics\/z-staged\.md\n$/);
+  const hook = path.join(root, "scripts/wiki/pre-commit.cjs");
+  const env = { WIKI_HOME: temp("precommit-status-home") };
+  const mixed = node(hook, [], { cwd: root, env });
+  assert.equal(mixed.status, 0);
+  assert.match(mixed.stderr, /unstaged wiki changes/);
+  assert.equal(fs.readFileSync(graphFile, "utf8"), before);
+  assert.equal(git(root, ["diff", "--cached", "--name-only"]), "wiki/topics/z-staged.md");
+
+  write(path.join(root, "wiki/topics/a-unstaged.md"), "# First topic\n");
+  const bin = temp("precommit-status-bin");
+  const gitStub = path.join(bin, "git");
+  const realGit = run("sh", ["-c", "command -v git"]).stdout.trim();
+  write(gitStub, '#!/bin/sh\nif [ "$1" = status ]; then exit 1; fi\nexec "$WIKI_TEST_REAL_GIT" "$@"\n');
+  fs.chmodSync(gitStub, 0o755);
+  const unavailable = node(hook, [], { cwd: root, env: { ...env, PATH: [bin, process.env.PATH].join(path.delimiter), WIKI_TEST_REAL_GIT: realGit } });
+  assert.equal(unavailable.status, 0);
+  assert.match(unavailable.stderr, /could not read wiki status; rebuild skipped/);
+  assert.equal(fs.readFileSync(graphFile, "utf8"), before);
+  assert.equal(git(root, ["diff", "--cached", "--name-only"]), "wiki/topics/z-staged.md");
 });
 
 test("pre-commit rebuilds and stages the graph after a staged wiki deletion", () => {

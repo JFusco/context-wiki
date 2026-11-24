@@ -100,7 +100,7 @@ function collect(root, { wikiRoot = "wiki" } = {}) {
   function add(sourceId, absoluteTarget, relation) {
     const targetId = absoluteTarget && idFor.get(path.resolve(absoluteTarget));
     if (!targetId) {
-      if (sourceId.startsWith(`${wikiRootRelative}/plans/`) && sourceId !== `${wikiRootRelative}/plans/INDEX.md`) return;
+      if (relation === "link" && kind(sourceId, wikiRootRelative) === "plan") return;
       throw new Error(`dangling ${relation}: ${sourceId} -> ${absoluteTarget ? slash(path.relative(root, absoluteTarget)) : "missing target"}`);
     }
     const edgeIdentity = `${sourceId}\0${targetId}\0${relation}`;
