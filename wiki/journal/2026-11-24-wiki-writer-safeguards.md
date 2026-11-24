@@ -1,7 +1,8 @@
 ---
 topics: [maintainer-workflow]
-issue: https://github.com/JFusco/context-wiki/issues/32
+issue: 'https://github.com/jfusco/context-wiki/issues/32'
 plans: [2026-11-24-preserve-wiki-writer-boundaries-b833ea14e7.md]
+issues: ['https://github.com/jfusco/context-wiki/issues/32']
 ---
 
 # Wiki writer safeguards
