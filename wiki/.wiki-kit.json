@@ -3,7 +3,7 @@
   "files": {
     ".github/workflows/wiki-check.yml": "fdec2f9ac64729361b5462cde50049cbed45a8aa2bb24f69e35ee12d277b4260",
     ".github/workflows/wiki-issue-sync.yml": "915127f7f556ac72758f453e648741895f87ea347f651fd158bc8c0cc4022e6d",
-    ".github/workflows/wiki-sync.yml": "da50f48a99418278c29846ad01c347db515d836e1a584372400966392d53e174",
+    ".github/workflows/wiki-sync.yml": "e61584e84cf9e6afe004232eef00bf1c1d90828e447cd09a39aae35a7a6dc71b",
     "scripts/wiki/apply-plan-audit.cjs": "f4f34911d47e0c2b60d66d4a24c66445a968ca327ffeaa4364d0e8fad09b5024",
     "scripts/wiki/archive-plan.cjs": "fd1e5e4c896998c4586f972e8c4ebc9243c6ba185439083495382092b132f5a2",
     "scripts/wiki/audit-plan-candidates.cjs": "d62c847163a8006e5e4df998435f5332785df92844889d79fb285b7a1f6a9b3b",
@@ -22,16 +22,16 @@
     "scripts/wiki/lib/frontmatter.cjs": "c0e02c1072e18b3fbfaeb9b81851a993e7ae9a5c86d42e497340a4009498237b",
     "scripts/wiki/lib/github-refs.cjs": "fc4668d0fba3b21fe28fd9fe0d29e9c15c214467432eaac02eb144191c561c1b",
     "scripts/wiki/lib/plans.cjs": "782bd71e016b01d06dc45989bafd5229ab8fc2a600118dbb221bdf4822f547b5",
-    "scripts/wiki/lib/wiki-graph.cjs": "35adda02e53b4bd96e6453118ab80a1cdc5cc4f04abfd055729c29a355303a23",
+    "scripts/wiki/lib/wiki-graph.cjs": "31aa8846cccbadb804c26253f243b80e45dbc90225100478a37c51b554a3a7bc",
     "scripts/wiki/navigate.cjs": "fb1f28f72a2fc1c71ece2abed25e116539f8177aef19c9b4068e5be59bda3188",
     "scripts/wiki/on-merge-sync.cjs": "d3664fdb391b7deb580721344a14f3b764869aad418ba704025d69f7cd27d771",
-    "scripts/wiki/pre-commit.cjs": "343e15af39e61127446fb5d6561eda122f4d9e8332fc87a2fc71d28015d71469",
+    "scripts/wiki/pre-commit.cjs": "5c94af810f1f445740f8bf219bb5568d92cfe6a80e92be8953f750253f821da0",
     "scripts/wiki/refresh-issue-state.cjs": "3e07c2e3951f2dc219e57db525c38c5a03e28294c663b72ffe4b70c6a0d7767a",
     "scripts/wiki/routing-policy.json": "ec0a3b3f8338f31032a731edadbc3e29d534976ebe3d0ac52b0618b40155c4dc",
     "scripts/wiki/routing.cjs": "9e90b9edd87da966a33b17a140187aefa039e08a375110c9c3935c7dd6cb0e44",
     "scripts/wiki/serve-graph.cjs": "8e8e0e08eb5623c2ab3d6e2ea581aacc6c57b9cc3e501f0781b84d28dd6e123b",
     "wiki/INDEX.md": "b1c46892cdc562afa48715df9396f46c7dfc59e6907c8411b25ae3f319512335",
-    "wiki/MECHANICS.md": "f1d1a8b152578faf63bd92702840864ba31182912b9d5df899db75051de3cfb4",
+    "wiki/MECHANICS.md": "ec87a379dddb44258b024a93df0b8bd7fe3ad107970f23b7d1fe16e8100ef566",
     "wiki/journal/.gitkeep": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
     "wiki/topics/.gitkeep": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
   }

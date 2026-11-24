@@ -18,7 +18,12 @@ function main() {
   const graphInputs = staged.filter((item) => (item.startsWith("wiki/") && item.endsWith(".md") && item !== "wiki/connections.md")
     || /^scripts\/wiki\/(?:build-graph|lib\/(?:common|frontmatter|github-refs|wiki-graph))\.cjs$/.test(item));
   const watched = ["wiki", "scripts/wiki/build-graph.cjs", "scripts/wiki/lib/common.cjs", "scripts/wiki/lib/frontmatter.cjs", "scripts/wiki/lib/github-refs.cjs", "scripts/wiki/lib/wiki-graph.cjs", "scripts/wiki/graph/data/graph.json"];
-  const wikiStatus = git(["status", "--porcelain", "--untracked-files=all", "--", ...watched], root).split(/\r?\n/).filter(Boolean);
+  const status = spawnSync("git", ["status", "--porcelain", "--untracked-files=all", "--", ...watched], { cwd: root, encoding: "utf8" });
+  if (status.status !== 0) {
+    console.warn("wiki warning: could not read wiki status; rebuild skipped");
+    return 0;
+  }
+  const wikiStatus = status.stdout.split(/\r?\n/).filter(Boolean);
   const hasUnstagedInput = wikiStatus.some((line) => line.startsWith("??") || (line.length > 1 && line[1] !== " "));
   if (hasUnstagedInput) {
     console.warn("wiki warning: unstaged wiki changes or graph inputs detected; rebuild skipped to avoid staging output derived from uncommitted content");

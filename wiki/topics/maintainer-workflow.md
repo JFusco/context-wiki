@@ -20,4 +20,16 @@ The context wiki is the authority for rationale and change history, and its
 graph indexes Markdown only. Graphify's code map does not add wiki graph nodes
 or install agent tool hooks.
 
+## Wiki writer safeguards
+
+The credentialed merge workflow verifies that numbered runs target the
+repository default branch before checkout. Batch replay and issue-state
+refresh share a concurrency group because both update the maintenance branch
+and pull request. Issue-state refresh runs Mondays at 11:30 UTC.
+
+The advisory commit hook preserves Git's staged and unstaged status columns.
+It leaves graph outputs alone when wiki inputs have unstaged changes or status
+cannot be read. Archived plans may retain historical body links, and their
+declared topics must resolve.
+
 Tracked by [context-wiki issue 28](https://github.com/JFusco/context-wiki/issues/28).

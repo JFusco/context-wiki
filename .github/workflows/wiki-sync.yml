@@ -19,7 +19,7 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: wiki-sync-${{ inputs.pr_number || inputs.since || github.event.pull_request.number || 'batch' }}
+  group: ${{ (inputs.pr_number || github.event.pull_request.number) && format('wiki-sync-{0}', inputs.pr_number || github.event.pull_request.number) || 'wiki-maintenance' }}
   cancel-in-progress: false
 
 env:
@@ -32,7 +32,9 @@ jobs:
   sync:
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event.pull_request.merged == true && !startsWith(github.event.pull_request.head.ref, 'bot/wiki-'))
+      (github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == github.event.repository.default_branch &&
+      !startsWith(github.event.pull_request.head.ref, 'bot/wiki-'))
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.BOT_TOKEN }}
@@ -46,19 +48,19 @@ jobs:
             echo 'pr_number and since are mutually exclusive'
             exit 1
           fi
+          base="$(gh api "repos/$GITHUB_REPOSITORY" --jq '.default_branch // empty')"
+          test -n "$base" || { echo 'The repository default branch is unavailable'; exit 1; }
           if [ -n "$PR_NUMBER" ]; then
             pr="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
             test -n "$(jq -r '.merged_at // empty' <<<"$pr")" || { echo "PR #$PR_NUMBER is not merged"; exit 1; }
             case "$(jq -r '.head.ref' <<<"$pr")" in bot/wiki-*) echo 'Wiki bot PRs are not replayed'; exit 1;; esac
-            base="$(jq -r '.base.ref' <<<"$pr")"
-          else
-            base="$(gh api "repos/$GITHUB_REPOSITORY" --jq '.default_branch')"
+            test "$(jq -r '.base.ref' <<<"$pr")" = "$base" || { echo "PR #$PR_NUMBER did not target the default branch"; exit 1; }
           fi
           echo "base=$base" >> "$GITHUB_OUTPUT"
       - name: Checkout merged base
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.context.outputs.base }}
+          ref: refs/heads/${{ steps.context.outputs.base }}
           fetch-depth: 0
           token: ${{ secrets.BOT_TOKEN }}
       - name: Setup Node

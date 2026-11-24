@@ -55,6 +55,7 @@ function main() {
   if (!metadata.includes("$wiki") || !metadata.includes("allow_implicit_invocation: true")) errors.push("openai.yaml invocation metadata is incomplete");
   const mirrored = [
     ".github/workflows/wiki-check.yml", ".github/workflows/wiki-sync.yml", ".github/workflows/wiki-issue-sync.yml",
+    "wiki/MECHANICS.md",
     "scripts/wiki/build-graph.cjs", "scripts/wiki/check.cjs", "scripts/wiki/navigate.cjs", "scripts/wiki/routing.cjs", "scripts/wiki/routing-policy.json",
     "scripts/wiki/on-merge-sync.cjs", "scripts/wiki/reconcile-merges.cjs", "scripts/wiki/pre-commit.cjs", "scripts/wiki/refresh-issue-state.cjs", "scripts/wiki/serve-graph.cjs",
     "scripts/wiki/lib/frontmatter.cjs", "scripts/wiki/lib/github-refs.cjs", "scripts/wiki/lib/wiki-graph.cjs",
